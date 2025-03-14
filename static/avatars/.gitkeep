@@ -1,0 +1,2 @@
+# 此文件用于确保static/avatars目录被Git追踪
+# 大部分头像文件不会被提交到Git仓库，只有default_avatar.png会被保留
