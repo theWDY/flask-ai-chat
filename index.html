@@ -1,0 +1,4586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- 设置页面的字符编码为UTF-8 -->
+    <meta charset="UTF-8">
+    <!-- 设置视口，以便在移动设备上适配显示 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 页面标题 -->
+    <title>ChatBot</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 定义CSS变量，方便后续修改配色方案 */
+        :root {
+            --primary-color: #10a37f;  /* 主色调 */
+            --secondary-color: #0e916f;  /* 次色调 */
+            --background-color: #f7f7f8;  /* 页面背景颜色 */
+            --sidebar-color: #202123;  /* 侧边栏颜色 */
+            --chat-background: #ffffff;  /* 聊天区域背景颜色 */
+        }
+
+        /* 通用样式 */
+        body {
+            font-family: 'Söhne', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;  /* 设置字体 */
+            background-color: var(--background-color);  /* 页面背景颜色 */
+            margin: 0;  /* 去除默认外边距 */
+            padding: 0;  /* 去除默认内边距 */
+            display: flex;  /* 使用flex布局 */
+            height: 100vh;  /* 高度为视口高度 */
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 260px;  /* 侧边栏宽度 */
+            background-color: var(--sidebar-color);  /* 背景颜色 */
+            color: white;  /* 文字颜色 */
+            padding: 1rem;  /* 内边距 */
+            display: flex;  /* 使用flex布局 */
+            flex-direction: column;  /* 垂直排列 */
+            transition: transform 0.3s ease;  /* 动画效果 */
+            overflow: hidden;  /* 隐藏溢出内容 */
+            height: 100vh;  /* 侧边栏高度为视口高度 */
+            position: sticky;  /* 使侧边栏固定 */
+            top: 0;  /* 固定在页面顶部 */
+            overflow-y: auto;  /* 允许垂直滚动 */
+        }
+
+        /* 侧边栏收起状态的样式 */
+        .sidebar-collapsed {
+            transform: translateX(-260px);  /* 使侧边栏向左偏移，隐藏 */
+        }
+
+        /* 切换侧边栏按钮样式 */
+        .toggle-sidebar {
+            position: absolute;  /* 绝对定位 */
+            left: 260px;  /* 位于侧边栏的右侧 */
+            top: 50%;  /* 垂直居中 */
+            transform: translateY(-50%);  /* 精确居中 */
+            background: var(--sidebar-color);  /* 背景颜色与侧边栏一致 */
+            color: white;  /* 文字颜色 */
+            border: none;  /* 去除边框 */
+            padding: 12px 8px;  /* 内边距 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            border-radius: 0 5px 5px 0;  /* 圆角 */
+            transition: left 0.3s ease;  /* 动画效果 */
+            z-index: 1000;  /* 保证按钮在最上层 */
+        }
+
+        /* 切换侧边栏按钮收起状态的样式 */
+        .toggle-sidebar.collapsed {
+            left: 0;  /* 按钮移至页面左侧 */
+        }
+
+        /* 主聊天区域 */
+        .main-container {
+            flex: 1;  /* 主容器占据剩余空间 */
+            display: flex;  /* 使用flex布局 */
+            flex-direction: column;  /* 垂直排列 */
+            transition: margin-left 0.3s ease;  /* 动画效果 */
+            padding: 1rem;  /* 内边距 */
+            min-width: 0;  /* 防止溢出 */
+            min-height: 100vh;  /* 确保最小高度为视口高度 */
+        }
+
+        /* 聊天内容容器 */
+        .chat-container {
+            flex: 1;  /* 占据剩余空间 */
+            display: flex;  /* 使用flex布局 */
+            flex-direction: column;  /* 垂直排列 */
+            max-width: 900px;  /* 最大宽度 */
+            margin: 0 auto;  /* 水平居中 */
+            width: 100%;  /* 宽度为100% */
+            background: var(--chat-background);  /* 背景颜色 */
+            min-height: calc(100vh - 2rem);  /* 减去padding后保持最小高度 */
+        }
+
+        /* 聊天头部样式 */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));  /* 渐变背景 */
+            color: white;  /* 文字颜色 */
+            text-align: center;  /* 文字居中 */
+            padding: 1rem;  /* 内边距 */
+            font-size: 1.5em;  /* 字体大小 */
+            border-radius: 10px 10px 0 0;  /* 圆角 */
+        }
+
+        /* 聊天历史记录区域 */
+        .chat-history {
+            flex: 1;  /* 占据剩余空间 */
+            padding: 2rem;  /* 内边距 */
+            overflow-y: auto;  /* 允许垂直滚动 */
+            background: var(--chat-background);  /* 背景颜色 */
+            min-height: 0;  /* 允许内容收缩 */
+        }
+
+        /* 每条消息样式 */
+        .message {
+            display: flex;  /* 使用flex布局 */
+            padding: 1rem;  /* 内边距 */
+            margin: 1rem 0;  /* 上下外边距 */
+            border-radius: 8px;  /* 圆角 */
+        }
+
+        /* 输入区域样式 */
+        .input-container {
+            padding: 1rem;  /* 内边距 */
+            background: white;  /* 背景颜色 */
+            border-top: 1px solid #e5e5e5;  /* 顶部边框 */
+            display: flex;  /* 使用flex布局 */
+            gap: 0.5rem;  /* 元素间隙 */
+            align-items: center;  /* 垂直居中 */
+            flex-wrap: wrap;  /* 允许元素换行 */
+        }
+
+        /* 下拉框样式 */
+        .input-container select {
+            padding: 0.5rem;  /* 内边距 */
+            border: 1px solid #e5e5e5;  /* 边框颜色 */
+            border-radius: 4px;  /* 圆角 */
+            background: white;  /* 背景颜色 */
+            min-width: 100px;  /* 设置最小宽度 */
+        }
+
+        /* 输入框样式 */
+        .input-container input {
+            flex: 1;  /* 占据剩余空间 */
+            padding: 0.8rem;  /* 内边距 */
+            border: 1px solid #e5e5e5;  /* 边框颜色 */
+            border-radius: 8px;  /* 圆角 */
+            font-size: 1rem;  /* 字体大小 */
+        }
+
+        /* 按钮样式 */
+        .input-container button {
+            background-color: var(--primary-color);  /* 背景颜色 */
+            color: white;  /* 文字颜色 */
+            border: none;  /* 去除边框 */
+            padding: 0.8rem 1.5rem;  /* 内边距 */
+            border-radius: 8px;  /* 圆角 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            transition: background-color 0.2s;  /* 背景颜色渐变效果 */
+        }
+
+        /* 按钮悬停时的效果 */
+        .input-container button:hover {
+            background-color: var(--secondary-color);  /* 改变背景颜色 */
+        }
+
+        /* 文件上传样式 */
+        .file-upload {
+            padding: 1rem;  /* 内边距 */
+            text-align: left;  /* 左对齐 */
+            background: white;  /* 背景颜色 */
+            border-top: 1px solid #e5e5e5;  /* 顶部边框 */
+            display: flex;  /* 使用flex布局 */
+            flex-direction: column;  /* 垂直排列 */
+            gap: 0.5rem;  /* 元素间隙 */
+        }
+
+        /* 文件上传标签样式 */
+        .file-upload-label {
+            display: inline-flex;  /* 行内flex布局 */
+            align-items: center;  /* 垂直居中 */
+            gap: 0.5rem;  /* 元素间隙 */
+            padding: 0.8rem 1.5rem;  /* 内边距 */
+            background-color: #f0f0f0;  /* 背景颜色 */
+            border-radius: 8px;  /* 圆角 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            transition: background-color 0.2s;  /* 背景颜色渐变效果 */
+        }
+
+        /* 文件上传标签悬停时的效果 */
+        .file-upload-label:hover {
+            background-color: #e0e0e0;  /* 改变背景颜色 */
+        }
+
+        /* 隐藏文件上传按钮 */
+        .file-upload input[type="file"] {
+            display: none;  /* 隐藏文件上传按钮 */
+        }
+
+        /* 历史记录容器样式 */
+        .history-container {
+            flex: 1;  /* 占据剩余空间 */
+            overflow-y: auto;  /* 允许垂直滚动 */
+            margin-bottom: 1rem;  /* 与底部保持间距 */
+        }
+
+        /* 当有历史记录时，显示历史记录 */
+        .history-container.has-items {
+            display: block;  /* 显示历史记录 */
+        }
+
+        /* 单条历史记录项样式 */
+        .history-item {
+            padding: 0.8rem;  /* 内边距 */
+            margin: 0.5rem 0;  /* 上下外边距 */
+            background-color: #2a2a2a;  /* 背景颜色 */
+            border-radius: 6px;  /* 圆角 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            transition: background-color 0.2s;  /* 背景颜色渐变效果 */
+            color: #ffffff;  /* 文字颜色 */
+        }
+
+        /* 删除按钮样式 */
+        .history-item .delete-btn {
+            color: #ffffff;  /* 设置文字颜色为白色 */
+            opacity: 0.7;  /* 初始透明度为0.7 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            padding: 5px;  /* 内边距为5px */
+            margin-left: 10px;  /* 左侧外边距为10px */
+        }
+
+        /* 删除按钮悬停时效果 */
+        .history-item .delete-btn:hover {
+            opacity: 1;  /* 悬停时透明度变为1，完全不透明 */
+        }
+
+        /* 历史项悬停时背景颜色 */
+        .history-item:hover {
+            background-color: #404040;  /* 悬停时背景颜色变为灰色 */
+        }
+
+        /* 新建对话按钮样式 */
+        #start-new-conversation {
+            width: 80%;  /* 按钮宽度为父元素的80% */
+            padding: 1rem;  /* 内边距为1rem */
+            background-color: var(--primary-color);  /* 背景颜色为主色 */
+            color: white;  /* 文字颜色为白色 */
+            border: none;  /* 去除边框 */
+            border-radius: 8px;  /* 设置圆角 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            margin: 1rem auto;  /* 上下外边距为1rem，水平居中 */
+            display: block;  /* 设置为块级元素 */
+            transition: background-color 0.2s;  /* 背景颜色变化时有0.2秒过渡效果 */
+        }
+
+        /* 新建对话按钮悬停时效果 */
+        #start-new-conversation:hover {
+            background-color: var(--secondary-color);  /* 悬停时背景颜色变为次色 */
+        }
+
+        /* 已上传文件展示样式 */
+        .uploaded-files {
+            display: flex;  /* 使用flex布局 */
+            flex-wrap: wrap;  /* 允许子元素换行 */
+            gap: 0.5rem;  /* 子元素之间的间隙为0.5rem */
+            padding: 0.5rem;  /* 内边距为0.5rem */
+            max-height: 200px;  /* 最大高度为200px */
+            overflow-y: auto;  /* 超出部分垂直滚动 */
+        }
+
+        /* 单个上传文件项样式 */
+        .uploaded-file-item {
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 垂直居中 */
+            background-color: #f0f0f0;  /* 背景颜色为浅灰色 */
+            border-radius: 8px;  /* 设置圆角 */
+            padding: 0.5rem;  /* 内边距为0.5rem */
+            min-width: 200px;  /* 最小宽度为200px */
+            max-width: 300px;  /* 最大宽度为300px */
+            margin: 0.25rem;  /* 外边距为0.25rem */
+        }
+
+        /* 文件信息容器样式 */
+        .file-info {
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 垂直居中 */
+            gap: 0.5rem;  /* 子元素间隙为0.5rem */
+            flex: 1;  /* 占据剩余空间 */
+            min-width: 0;  /* 允许内容收缩 */
+        }
+
+        /* 文件信息文本样式 */
+        .file-info span {
+            overflow: hidden;  /* 隐藏超出部分 */
+            text-overflow: ellipsis;  /* 使用省略号表示超出部分 */
+            white-space: nowrap;  /* 防止换行 */
+            flex: 1;  /* 占据剩余空间 */
+        }
+
+        /* 文件删除按钮样式 */
+        .file-remove-btn {
+            color: #ff4444;  /* 按钮文字颜色为红色 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+            padding: 5px;  /* 内边距为5px */
+            opacity: 0.7;  /* 初始透明度为0.7 */
+            transition: opacity 0.2s;  /* 透明度变化时有0.2秒过渡效果 */
+            flex-shrink: 0;  /* 防止按钮被压缩 */
+            margin-left: 0.5rem;  /* 左侧外边距为0.5rem */
+        }
+
+        /* 文件删除按钮悬停时效果 */
+        .file-remove-btn:hover {
+            opacity: 1;  /* 悬停时透明度变为1，完全不透明 */
+        }
+
+        /* 小屏幕上的响应式调整 */
+        @media (max-width: 768px) {
+            /* 调整下拉框的宽度 */
+            .input-container select {
+                flex: 1;  /* 占据剩余空间 */
+                min-width: 0;  /* 允许宽度收缩 */
+            }
+
+            /* 输入容器改为垂直排列 */
+            .input-container {
+                flex-direction: column;  /* 垂直排列 */
+            }
+
+            /* 输入框在小屏幕上的宽度为100% */
+            .input-container input {
+                width: 100%;  /* 宽度为100% */
+            }
+
+            /* 聊天容器最大宽度为100% */
+            .chat-container {
+                margin: 0;  /* 去除外边距 */
+                max-width: 100%;  /* 最大宽度为100% */
+            }
+
+            /* 侧边栏改为绝对定位 */
+            .sidebar {
+                position: absolute;  /* 使用绝对定位 */
+                height: 100%;  /* 高度为100% */
+                z-index: 1000;  /* 提升层级 */
+            }
+
+            /* 文件上传标签宽度调整为100%，居中对齐 */
+            .file-upload-label {
+                width: 100%;  /* 宽度为100% */
+                justify-content: center;  /* 内容居中 */
+            }
+        }
+
+        /* 确认对话框样式 */
+        .confirm-dialog {
+            display: none;  /* 默认隐藏对话框 */
+            position: fixed;  /* 固定定位 */
+            top: 50%;  /* 垂直居中 */
+            left: 50%;  /* 水平居中 */
+            transform: translate(-50%, -50%);  /* 精确居中 */
+            background: white;  /* 背景颜色为白色 */
+            padding: 20px;  /* 内边距为20px */
+            border-radius: 8px;  /* 设置圆角 */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);  /* 阴影效果 */
+            z-index: 1000;  /* 提升层级 */
+        }
+
+        /* 对话框按钮容器样式 */
+        .confirm-dialog .dialog-buttons {
+            display: flex;  /* 使用flex布局 */
+            justify-content: flex-end;  /* 按钮靠右对齐 */
+            gap: 10px;  /* 按钮之间的间隙为10px */
+            margin-top: 15px;  /* 上外边距为15px */
+        }
+
+        /* 确认和取消按钮样式 */
+        .confirm-dialog button {
+            padding: 5px 15px;  /* 内边距为5px 15px */
+            border: none;  /* 去除边框 */
+            border-radius: 4px;  /* 设置圆角 */
+            cursor: pointer;  /* 鼠标悬停时显示为点击状态 */
+        }
+
+        /* 确认按钮样式 */
+        .confirm-dialog .confirm-yes {
+            background-color: var(--primary-color);  /* 背景颜色为主色 */
+            color: white;  /* 文字颜色为白色 */
+        }
+
+        /* 取消按钮样式 */
+        .confirm-dialog .confirm-no {
+            background-color: #e0e0e0;  /* 背景颜色为浅灰色 */
+        }
+
+        /* 对话框背景遮罩样式 */
+        .dialog-overlay {
+            display: none;  /* 默认隐藏遮罩 */
+            position: fixed;  /* 固定定位 */
+            top: 0;  /* 顶部对齐 */
+            left: 0;  /* 左对齐 */
+            right: 0;  /* 右对齐 */
+            bottom: 0;  /* 底部对齐 */
+            background: rgba(0, 0, 0, 0.5);  /* 半透明黑色背景 */
+            z-index: 999;  /* 提升层级 */
+        }
+
+        /* 社交链接容器样式 */
+        .social-links {
+            margin-top: auto;  /* 将社交链接置底 */
+            padding: 1rem;  /* 内边距为1rem */
+            border-top: 1px solid rgba(255, 255, 255, 0.1);  /* 顶部边框 */
+            text-align: center;  /* 文字居中 */
+        }
+
+        /* 社交链接标题样式 */
+        .social-title {
+            color: #888;  /* 文字颜色为灰色 */
+            font-size: 0.9rem;  /* 字体大小为0.9rem */
+            margin-bottom: 0.8rem;  /* 下外边距为0.8rem */
+            text-align: center;  /* 文字居中 */
+            width: 100%;  /* 宽度为100% */
+        }
+
+        /* 社交图标容器样式 */
+        .social-icons {
+            display: flex;  /* 使用flex布局 */
+            justify-content: center;  /* 图标居中对齐 */
+            gap: 1.5rem;  /* 图标间距为1.5rem */
+            align-items: center;  /* 确保所有图标垂直对齐 */
+        }
+
+        /* 社交图标样式 */
+        .social-icon {
+            color: #888;  /* 文字颜色为灰色 */
+            font-size: 1.5rem;  /* 字体大小为1.5rem */
+            transition: all 0.3s ease;  /* 设置过渡效果 */
+            text-decoration: none;  /* 去除文本装饰 */
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 确保所有图标垂直居中 */
+            justify-content: center;  /* 确保所有图标水平居中 */
+        }
+
+        /* 社交图标悬停效果 */
+        .social-icon:hover {
+            color: white;  /* 悬停时图标变为白色 */
+            transform: scale(1.1);  /* 悬停时放大1.1倍 */
+        }
+
+        /* GitHub图标样式 */
+        .social-icon .fa-github {
+            font-size: 1.6rem;  /* 调大GitHub图标的字体大小 */
+        }
+
+
+        /* 使用自定义的哔哩哔哩 SVG 图标 */
+        /* 使用自定义的哔哩哔哩 SVG 图标 */
+        .bilibili-icon {
+            width: 24px;  /* 设置图标的宽度 */
+            height: 24px;  /* 设置图标的高度 */
+            fill: currentColor;  /* 使用当前文字颜色填充图标 */
+        }
+
+        /* 修改聊天消息样式 */
+        .chat-message {
+            display: flex;  /* 使用弹性盒子布局 */
+            align-items: flex-start;  /* 垂直对齐到顶部 */
+            margin: 1rem 0;  /* 上下外边距 */
+            gap: 1rem;  /* 各元素之间的间隔 */
+            width: 100%;  /* 占满父容器的宽度 */
+        }
+
+        /* 用户消息样式 */
+        .user-message {
+            flex-direction: row-reverse;  /* 用户消息内容从右侧显示 */
+            justify-content: flex-start;  /* 将消息内容对齐到左边 */
+        }
+
+        /* 机器人消息样式 */
+        .bot-message {
+            justify-content: flex-start;  /* 将消息内容对齐到左边 */
+            margin-right: 20%;  /* 机器人消息右侧留空 */
+        }
+
+        /* 消息内容样式 */
+        .message-content {
+            position: relative;
+            padding: 10px;
+            padding-right: 40px;
+            background: #f7f7f8;
+            border-radius: 8px;
+            margin: 5px 0;
+        }
+
+        /* 用户消息的内容样式 */
+        .user-message .message-content {
+            background-color: #10a37f;  /* 背景色 */
+            color: white;  /* 字体颜色 */
+            margin-right: 1rem;  /* 右边距 */
+            padding: 1rem;  /* 内边距 */
+            border-radius: 15px;  /* 圆角效果 */
+        }
+
+        /* 机器人消息的内容样式 */
+        .bot-message .message-content {
+            background-color: #f7f7f8;  /* 背景色 */
+            color: #000;  /* 字体颜色 */
+            border: none;  /* 去掉边框 */
+        }
+
+        /* 消息头像样式 */
+        .message-avatar {
+            width: 35px;  /* 设置头像的宽度 */
+            height: 35px;  /* 设置头像的高度 */
+            border-radius: 50%;  /* 圆形头像 */
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 垂直居中 */
+            justify-content: center;  /* 水平居中 */
+            flex-shrink: 0;  /* 防止头像缩小 */
+        }
+
+        /* 用户头像样式 */
+        .user-avatar {
+            background-color: #2a2a2a;  /* 背景色 */
+            color: white;  /* 文字颜色 */
+        }
+
+        /* 机器人头像样式 */
+        .bot-avatar {
+            background-color: #10a37f;  /* 背景色 */
+            color: white;  /* 文字颜色 */
+        }
+
+        /* 历史对话中的当前对话标记 */
+        .history-item {
+            position: relative;  /* 相对定位 */
+        }
+
+        /* 当前对话标记 */
+        .current-chat-indicator {
+            position: absolute;  /* 绝对定位 */
+            top: 8px;  /* 顶部偏移 */
+            right: 8px;  /* 右侧偏移 */
+            width: 8px;  /* 圆点的宽度 */
+            height: 8px;  /* 圆点的高度 */
+            background-color: #ff4444;  /* 背景色 */
+            border-radius: 50%;  /* 圆形 */
+            display: none;  /* 默认隐藏 */
+        }
+
+        /* 当前对话项的样式 */
+        .history-item.current {
+            background-color: #404040;  /* 背景色 */
+        }
+
+        /* 当前对话项显示指示器 */
+        .history-item.current .current-chat-indicator {
+            display: block;  /* 显示指示器 */
+        }
+
+        /* 文件上传样式修改 */
+        .uploaded-file-item {
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 垂直居中 */
+            justify-content: space-between;  /* 项目之间分开显示 */
+            padding: 0.5rem;  /* 内边距 */
+            margin: 0.5rem 0;  /* 上下外边距 */
+            background-color: #f0f0f0;  /* 背景色 */
+            border-radius: 8px;  /* 圆角效果 */
+            transition: background-color 0.2s;  /* 背景色变化的过渡效果 */
+        }
+
+        /* 文件信息样式 */
+        .file-info {
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 垂直居中 */
+            gap: 0.5rem;  /* 各项目之间的间隔 */
+        }
+
+        /* 文件移除按钮样式 */
+        .file-remove-btn {
+            color: #ff4444;  /* 字体颜色 */
+            cursor: pointer;  /* 鼠标样式为指针 */
+            padding: 5px;  /* 内边距 */
+            opacity: 0.7;  /* 初始透明度 */
+            transition: opacity 0.2s;  /* 透明度过渡效果 */
+        }
+
+        /* 文件移除按钮 hover 时效果 */
+        .file-remove-btn:hover {
+            opacity: 1;  /* 鼠标悬停时完全不透明 */
+        }
+
+        /* 消息元信息样式 */
+        .message-meta {
+            margin-top: 0.5rem;  /* 上边距 */
+            font-size: 0.85rem;  /* 字体大小 */
+            opacity: 0.8;  /* 透明度 */
+            border-top: 1px solid rgba(255, 255, 255, 0.2);  /* 上边框 */
+            padding-top: 0.5rem;  /* 上内边距 */
+        }
+
+        /* 元信息项的样式 */
+        .meta-item {
+            display: inline-flex;  /* 水平排列 */
+            align-items: center;  /* 垂直居中 */
+            margin-right: 1rem;  /* 右边距 */
+            padding: 0.2rem 0.5rem;  /* 内边距 */
+            border-radius: 12px;  /* 圆角效果 */
+            background-color: rgba(255, 255, 255, 0.1);  /* 背景色 */
+        }
+
+        /* 元信息图标样式 */
+        .meta-item i {
+            margin-right: 0.4rem;  /* 图标右边距 */
+            font-size: 0.9rem;  /* 图标字体大小 */
+        }
+
+        /* 为不同类型的元信息添加特定样式 */
+        .search-enabled {
+            background-color: rgba(64, 196, 255, 0.2);  /* 搜索启用的背景色 */
+        }
+
+        .quotes-attached {
+            background-color: rgba(16, 163, 127, 0.2);  /* 引用附加的背景色 */
+        }
+
+        .files-attached {
+            background-color: rgba(255, 193, 7, 0.2);  /* 文件附加的背景色 */
+        }
+
+        .reasoning-enabled {
+            background-color: rgba(147, 112, 219, 0.2);  /* 推理功能启用的背景色 */
+        }
+
+        /* 修改用户消息内容的样式以适应新的元信息 */
+        .user-message .message-content {
+            background-color: #10a37f;  /* 背景色 */
+            color: white;  /* 字体颜色 */
+            margin-right: 1rem;  /* 右边距 */
+            padding: 1rem;  /* 内边距 */
+            border-radius: 15px;  /* 圆角效果 */
+        }
+
+        /* 确保元信息在暗色背景上清晰可见 */
+        .user-message .message-meta {
+            color: rgba(255, 255, 255, 0.9);  /* 字体颜色 */
+        }
+
+        /* 修改文件列表显示样式 */
+        .uploaded-files-list {
+            margin-top: 0.5rem;  /* 上边距 */
+            display: flex;  /* 使用flex布局 */
+            flex-direction: column;  /* 垂直排列 */
+            gap: 0.3rem;  /* 项目之间的间隔 */
+        }
+
+        /* 文件项的样式 */
+        .file-item {
+            display: flex;  /* 使用flex布局 */
+            align-items: center;  /* 垂直居中 */
+            gap: 0.5rem;  /* 项目之间的间隔 */
+            padding: 0.2rem 0.5rem;  /* 内边距 */
+            background-color: rgba(255, 255, 255, 0.1);  /* 背景色 */
+            border-radius: 8px;  /* 圆角效果 */
+            font-size: 0.85rem;  /* 字体大小 */
+        }
+
+        /* 文件项图标样式 */
+        .file-item i {
+            font-size: 0.9rem;  /* 图标字体大小 */
+        }
+
+        /* 修改元信息容器样式 */
+        .message-meta {
+            margin-top: 0.8rem;  /* 上边距 */
+            font-size: 0.85rem;  /* 字体大小 */
+            opacity: 0.9;  /* 透明度 */
+            border-top: 1px solid rgba(255, 255, 255, 0.3);  /* 上边框 */
+            padding-top: 0.8rem;  /* 上内边距 */
+        }
+
+
+        /* 设置元信息项的布局 */
+        .meta-item {
+            display: flex;  /* 使用弹性布局 */
+            flex-direction: column;  /* 设置子元素按列排列 */
+            padding: 0.5rem;  /* 添加内边距 */
+            border-radius: 12px;  /* 设置圆角 */
+            background-color: rgba(255, 255, 255, 0.1);  /* 设置背景颜色为半透明白色 */
+        }
+
+        /* 设置元信息项的第一个子元素（通常是图标和标题）的布局 */
+        .meta-item > div:first-child {
+            display: flex;  /* 使用弹性布局 */
+            align-items: center;  /* 垂直居中对齐 */
+            gap: 0.5rem;  /* 元素之间的间隔 */
+            margin-bottom: 0.3rem;  /* 设置下边距 */
+        }
+
+        /* 社交链接的样式设置 */
+        .social-links {
+            margin-top: auto;  /* 将其推到父元素的底部 */
+            padding: 1rem;  /* 添加内边距 */
+            border-top: 1px solid rgba(255, 255, 255, 0.1);  /* 添加顶部边框 */
+            text-align: center;  /* 设置文本居中 */
+        }
+
+        /* 社交链接标题的样式设置 */
+        .social-title {
+            color: #888;  /* 字体颜色为浅灰色 */
+            font-size: 0.9rem;  /* 设置字体大小 */
+            margin-bottom: 0.8rem;  /* 设置下边距 */
+            text-align: center;  /* 文本居中 */
+            width: 100%;  /* 宽度为100% */
+        }
+
+        /* 主题切换按钮的样式设置 */
+        .theme-toggle {
+            position: absolute;  /* 设置为绝对定位 */
+            right: 20px;  /* 右侧距离为20px */
+            top: 50%;  /* 垂直居中 */
+            transform: translateY(-50%);  /* 使按钮完全居中 */
+            background: rgba(0, 0, 0, 0.1);  /* 设置黑色半透明背景 */
+            border: 2px solid rgba(0, 0, 0, 0.2);  /* 设置边框为黑色半透明 */
+            color: #000;  /* 设置字体颜色为黑色 */
+            font-size: 1.5rem;  /* 字体大小为1.5rem */
+            cursor: pointer;  /* 设置鼠标为指针样式 */
+            width: 40px;  /* 宽度为40px */
+            height: 40px;  /* 高度为40px */
+            border-radius: 50%;  /* 圆形按钮 */
+            display: flex;  /* 使用弹性布局 */
+            align-items: center;  /* 垂直居中 */
+            justify-content: center;  /* 水平居中 */
+            transition: all 0.3s ease;  /* 设置过渡效果 */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);  /* 设置阴影 */
+        }
+
+        /* 主题切换按钮悬停时的样式 */
+        .theme-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.2);  /* 增加背景颜色的透明度 */
+            border-color: rgba(0, 0, 0, 0.3);  /* 增加边框透明度 */
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);  /* 增加阴影 */
+        }
+
+        /* 深色模式下的主题切换按钮样式 */
+        body.dark-theme .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);  /* 深色模式下背景为白色半透明 */
+            border: 2px solid rgba(255, 255, 255, 0.3);  /* 深色模式下边框为白色半透明 */
+            color: white;  /* 深色模式下字体为白色 */
+        }
+
+        /* 深色模式下主题切换按钮悬停时的样式 */
+        body.dark-theme .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.3);  /* 深色模式下悬停时背景颜色 */
+            border-color: rgba(255, 255, 255, 0.5);  /* 深色模式下悬停时边框颜色 */
+        }
+
+        /* 深色模式下的整体样式覆盖 */
+        body.dark-theme {
+            background-color: #343541;  /* 深色模式背景颜色 */
+        }
+
+        /* 深色模式下聊天容器的样式 */
+        body.dark-theme .chat-container {
+            background: #444654;  /* 设置背景为暗灰色 */
+        }
+
+        /* 深色模式下聊天历史记录的样式 */
+        body.dark-theme .chat-history {
+            background: #444654;  /* 设置背景为暗灰色 */
+        }
+
+        /* 深色模式下机器人消息的样式 */
+        body.dark-theme .bot-message .message-content {
+            background-color: #444654;  /* 设置消息内容背景为暗灰色 */
+            color: #ececf1;  /* 设置字体颜色为浅灰色 */
+        }
+
+        /* 深色模式下输入容器的样式 */
+        body.dark-theme .input-container {
+            background: #444654;  /* 设置背景颜色为暗灰色 */
+        }
+
+        /* 深色模式下输入框的样式 */
+        body.dark-theme .input-container input {
+            background: #343541;  /* 设置背景颜色为更暗的灰色 */
+            color: #ececf1;  /* 设置字体颜色为浅灰色 */
+            border-color: #4a4b53;  /* 设置边框颜色为暗灰色 */
+        }
+
+        /* 动画效果：旋转 */
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);  /* 初始角度 */
+            }
+            to {
+                transform: rotate(360deg);  /* 旋转一圈 */
+            }
+        }
+
+        /* 主题切换按钮图标的动画效果 */
+        .theme-toggle i {
+            transition: transform 0.5s ease;  /* 设置旋转动画 */
+        }
+
+        /* 主题切换按钮悬停时图标旋转 */
+        .theme-toggle:hover i {
+            animation: rotate 1s linear;  /* 使图标旋转 */
+        }
+
+        /* 深色模式下选择框和下拉框的样式 */
+        body.dark-theme .input-container select,
+        body.dark-theme #model,
+        body.dark-theme #search-toggle {
+            background-color: #343541;  /* 设置背景颜色为更暗的灰色 */
+            color: #ececf1;  /* 设置字体颜色为浅灰色 */
+            border-color: #4a4b53;  /* 设置边框颜色为暗灰色 */
+        }
+
+        /* 深色模式下文件上传区域的样式 */
+        body.dark-theme .file-upload {
+            background: #444654;  /* 设置文件上传区域背景为暗灰色 */
+            border-color: #4a4b53;  /* 设置边框颜色 */
+        }
+
+        /* 深色模式下文件上传按钮的样式 */
+        body.dark-theme .file-upload-label {
+            background-color: #343541;  /* 设置按钮背景颜色 */
+            color: #ececf1;  /* 设置按钮字体颜色 */
+        }
+
+        /* 深色模式下文件上传按钮悬停时的样式 */
+        body.dark-theme .file-upload-label:hover {
+            background-color: #40414f;  /* 悬停时按钮背景颜色 */
+        }
+
+        /* 深色模式下已上传文件项的样式 */
+        body.dark-theme .uploaded-file-item {
+            background-color: #343541;  /* 设置背景颜色为暗灰色 */
+            color: #ececf1;  /* 设置字体颜色为浅灰色 */
+        }
+
+        /* 深色模式下文件移除按钮的样式 */
+        body.dark-theme .file-remove-btn {
+            color: #ff6b6b;  /* 设置文件移除按钮字体颜色为红色 */
+        }
+
+        /* 深色模式下选择框的下拉选项样式 */
+        body.dark-theme select option {
+            background-color: #343541;  /* 设置下拉选项的背景颜色 */
+            color: #ececf1;  /* 设置下拉选项的字体颜色 */
+        }
+
+        /* 历史记录项的编辑按钮样式 */
+        .history-item .edit-btn {
+            color: #ffffff;  /* 设置字体颜色为白色 */
+            opacity: 0.7;  /* 初始透明度 */
+            cursor: pointer;  /* 设置鼠标样式为指针 */
+            padding: 5px;  /* 设置内边距 */
+            margin-left: 10px;  /* 设置左边距 */
+        }
+
+        /* 历史记录项编辑按钮的悬停效果 */
+        .history-item .edit-btn:hover {
+            opacity: 1;  /* 悬停时完全不透明 */
+        }
+
+        /* 历史记录项标题样式 */
+        .history-item .title {
+            flex: 1;  /* 设置标题占满剩余空间 */
+            overflow: hidden;  /* 隐藏超出的文本 */
+            text-overflow: ellipsis;  /* 使用省略号表示溢出的文本 */
+            white-space: nowrap;  /* 防止文本换行 */
+        }
+
+        /* 历史记录项的样式 */
+        .history-item {
+            display: flex;  /* 使用弹性布局 */
+            align-items: center;  /* 垂直居中 */
+            padding: 0.8rem;  /* 添加内边距 */
+            margin: 0.5rem 0;  /* 设置上下外边距 */
+            background-color: #2a2a2a;  /* 设置背景颜色为暗灰色 */
+            border-radius: 6px;  /* 设置圆角 */
+            cursor: pointer;  /* 设置鼠标为指针 */
+            transition: background-color 0.2s;  /* 设置过渡效果 */
+            color: #ffffff;  /* 设置字体颜色为白色 */
+        }
+
+        /* 引用按钮的样式 */
+        .quote-button {
+            position: absolute;  /* 设置为绝对定位 */
+            background-color: #ffffff;  /* 设置背景颜色为白色 */
+            border: 1px solid #e5e5e5;  /* 设置边框 */
+            border-radius: 4px;  /* 设置圆角 */
+            padding: 4px 8px;  /* 设置内边距 */
+            cursor: pointer;  /* 设置鼠标样式为指针 */
+            display: none;  /* 默认隐藏 */
+            align-items: center;  /* 设置垂直居中 */
+            gap: 4px;  /* 设置元素间的间距 */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);  /* 设置阴影 */
+            z-index: 1000;  /* 设置层级 */
+        }
+
+        /* 引用按钮悬停时的样式 */
+        .quote-button:hover {
+            background-color: #f5f5f5;  /* 设置悬停时背景颜色 */
+        }
+
+        /* 输入框中的引用样式 */
+        .quote-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background-color: var(--background-color);
+            border-radius: 8px;
+        }
+
+        .quote-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background-color: rgba(16, 163, 127, 0.15);  /* 增加背景色的不透明度 */
+            border-radius: 6px;
+            max-width: 100%;
+            width: fit-content;
+            border: 1px solid rgba(16, 163, 127, 0.3);  /* 添加边框增加视觉区分度 */
+        }
+
+        .quote-text {
+            font-size: 0.9em;
+            color: #333;  /* 修改为更深的文字颜色 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+            font-weight: 500;  /* 添加适当的字重 */
+        }
+
+        .quote-remove {
+            color: #ff4444;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .quote-remove:hover {
+            opacity: 1;
+        }
+
+        /* 深色模式适配 */
+        body.dark-theme .quote-button {
+            background-color: #343541;
+            border-color: #4a4b53;
+            color: #ececf1;
+        }
+
+        body.dark-theme .quote-button:hover {
+            background-color: #40414f;
+        }
+
+        body.dark-theme .quote-item {
+            background-color: rgba(16, 163, 127, 0.25);  /* 深色模式下增加背景色的不透明度 */
+            border: 1px solid rgba(16, 163, 127, 0.4);  /* 深色模式下的边框 */
+        }
+
+        body.dark-theme .quote-text {
+            color: #ffffff;  /* 深色模式下使用白色文字 */
+        }
+
+        /* 修改输入容器以适应引用 */
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .message-edit-btn {
+            position: absolute;
+            left: -25px;  /* 修改为负值，使按钮位于消息内容左侧 */
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+
+        .user-message {
+            position: relative;
+        }
+
+        .user-message:hover .message-edit-btn {
+            opacity: 1;
+        }
+
+        .message-edit-btn:hover {
+            color: var(--primary-color);
+        }
+
+        /* 编辑状态的消息样式 */
+        .editing .message-content {
+            background-color: rgba(16, 163, 127, 0.1) !important;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .edit-actions button {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .edit-confirm {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .edit-cancel {
+            background-color: #ff4444;
+            color: white;
+        }
+
+        /* 深色模式适配 */
+        body.dark-theme .message-edit-btn {
+            color: #ececf1;
+        }
+
+        body.dark-theme .message-edit-btn:hover {
+            color: var(--primary-color);
+        }
+
+        body.dark-theme .editing .message-content {
+            background-color: rgba(16, 163, 127, 0.2) !important;
+        }
+
+        /* 搜索框容器样式 */
+        .search-container {
+            padding: 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 搜索框外层样式 */
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        /* 搜索框样式 */
+        #history-search {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            padding: 0.5rem;
+            padding-left: 2rem;
+            font-size: 0.9rem;
+            width: 100%;
+            outline: none;
+        }
+
+        #history-search::placeholder {
+            color: #888;
+        }
+
+        /* 搜索图标样式 */
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        /* 清除按钮样式 */
+        .clear-search {
+            color: #888;
+            cursor: pointer;
+            padding: 0.3rem;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .clear-search:hover {
+            color: #ffffff;
+        }
+
+        /* 当搜索框有内容时显示清除按钮 */
+        #history-search:not(:placeholder-shown) + .clear-search {
+            opacity: 1;
+        }
+
+        /* 搜索框悬停效果 */
+        .search-box:hover {
+            background-color: #363636;
+        }
+
+        /* 搜索结果高亮样式 */
+        .highlight-match {
+            background-color: rgba(16, 163, 127, 0.3);
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        /* 深色模式适配 */
+        body.dark-theme .search-box {
+            background-color: #2a2a2a;
+        }
+
+        body.dark-theme .search-box:hover {
+            background-color: #363636;
+        }
+
+        body.dark-theme #history-search {
+            color: #ffffff;
+        }
+
+        body.dark-theme #history-search::placeholder {
+            color: #888;
+        }
+
+        .bot-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        /* 复制按钮样式 */
+        .message-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            color: #666;
+            cursor: pointer;
+            padding: 5px 8px;
+            font-size: 14px;
+            opacity: 0;  /* 默认完全透明（隐藏） */
+            transition: all 0.2s ease-in-out;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 当鼠标悬停在消息上时显示复制按钮 */
+        .bot-message:hover .message-copy-btn {
+            opacity: 1;  /* 鼠标悬停时显示 */
+        }
+
+        /* 鼠标悬停在按钮上时的效果 */
+        .message-copy-btn:hover {
+            background: #f0f0f0;
+            color: #1a73e8;
+            border-color: #1a73e8;
+        }
+
+        /* 复制成功动画 */
+        .copy-success {
+            opacity: 1 !important;  /* 确保复制成功时按钮可见 */
+            background: #4CAF50 !important;
+            color: white !important;
+            border-color: #4CAF50 !important;
+        }
+
+        /* 登录/注册按钮容器样式 */
+        .auth-buttons {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 登录/注册按钮样式 */
+        .auth-button {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* 登录按钮特定样式 */
+        .login-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .login-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* 注册按钮特定样式 */
+        .register-button {
+            background-color: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .register-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 模态框基础样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 模态框内容样式 */
+        .modal-content {
+            background-color: #2a2a2a;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 关闭按钮样式 */
+        .close-modal {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: white;
+        }
+
+        /* 表单样式 */
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .auth-form h2 {
+            margin: 0 0 1.5rem 0;
+            text-align: center;
+            color: white;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            padding: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            background-color: #363636;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: #404040;
+        }
+
+        .auth-form button {
+            padding: 0.8rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .auth-form button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 1rem;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .form-footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* 用户信息容器样式 */
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            width: 100%;
+            padding: 0.5rem;
+        }
+
+        /* 用户名显示样式 */
+        .user-info .username-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #ffffff;
+        }
+
+        .user-info .username-display i {
+            color: var(--primary-color);
+        }
+
+        /* 退出按钮特定样式 */
+        .logout-button {
+            background-color: transparent;
+            color: #ff4d4d;
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .logout-button:hover {
+            background-color: rgba(255, 77, 77, 0.1);
+            border-color: rgba(255, 77, 77, 0.5);
+        }
+
+        /* 密码强度指示器样式 */
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .strength-meter {
+            height: 4px;
+            background-color: #444;
+            border-radius: 2px;
+            margin-top: 0.3rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .strength-meter div {
+            height: 100%;
+            width: 0;
+            transition: all 0.3s ease;
+        }
+
+        .strength-weak {
+            background-color: #ff4d4d;
+        }
+
+        .strength-medium {
+            background-color: #ffd700;
+        }
+
+        .strength-strong {
+            background-color: #00cc00;
+        }
+
+        .password-requirements {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.2rem;
+        }
+
+        .requirement i {
+            font-size: 0.8rem;
+        }
+
+        .requirement.met i {
+            color: #00cc00;
+        }
+
+        .requirement.unmet i {
+            color: #888;
+        }
+
+        /* 添加邮箱组样式 */
+        .email-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .email-group input {
+            flex: 1;
+        }
+
+        /* 发送验证码按钮样式 */
+        .send-code-btn {
+            height: 40px;
+            padding: 0.5rem 1rem;
+            box-sizing: border-box;
+            line-height: 1.2;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            min-width: 100px;
+        }
+
+        .send-code-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .send-code-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        /* 验证码输入框样式 */
+        #register-verification-code {
+            letter-spacing: 4px;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        /* 深色模式适配 */
+        body.dark-theme .send-code-btn:disabled {
+            background-color: #444;
+            color: #888;
+        }
+
+        /* 设置按钮和菜单的样式 */
+        .settings-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .settings-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-button i {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .settings-button:hover {
+            background-color: var(--secondary-color);
+            transform: scale(1.05);
+        }
+
+        .settings-button:hover i {
+            transform: rotate(45deg);
+        }
+
+        .settings-menu {
+            display: none;
+            flex-direction: column;
+            background-color: white;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+        }
+
+        .settings-menu-item {
+            background-color: transparent;
+            color: #333;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+
+        .settings-menu-item i {
+            font-size: 1.1rem;
+            color: var(--primary-color);
+        }
+
+        .settings-menu-item:hover {
+            background-color: #f5f5f5;
+            color: var(--primary-color);
+        }
+
+        /* 账户信息模态框样式 */
+        .account-info-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        /* 头像上传相关样式 */
+        .avatar-container {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+
+        .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            overflow: hidden;
+            border: 3px solid var(--primary-color);
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-upload-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .avatar-upload-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .avatar-upload-input {
+            display: none;
+        }
+
+        .account-info-content {
+            position: relative;
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .account-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .account-info-header h2 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .account-info-close {
+            font-size: 1.5rem;
+            color: #666;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .account-info-close:hover {
+            color: var(--primary-color);
+        }
+
+        .account-info-item {
+            margin-bottom: 15px;
+        }
+
+        .account-info-item label {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .account-info-item .value {
+            color: #333;
+            font-size: 1.1rem;
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 6px;
+        }
+
+        /* 忘记密码按钮样式 */
+        .forgot-password {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            display: block;
+            text-align: right;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        .forgot-password:hover {
+            color: var(--secondary-color);
+        }
+
+        /* 忘记密码模态框样式 */
+        .reset-password-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .reset-password-content {
+            background-color: var(--chat-background);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        .reset-password-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .reset-password-close {
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .reset-password-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .reset-password-form input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .reset-password-form button {
+            padding: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .reset-password-form button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .reset-password-result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .reset-password-result.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .reset-password-result.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* 个人偏好模态框样式 */
+        .preferences-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .preferences-content {
+            background-color: #2a2a2a;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .preferences-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .preferences-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .preferences-close {
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .preferences-close:hover {
+            color: white;
+        }
+
+        .preference-item {
+            margin-bottom: 2rem;
+        }
+
+        .preference-item p {
+            color: #888;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .slider-container {
+            width: 100%;
+            padding: 10px 0;
+        }
+
+        .preference-slider {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #363636;
+            outline: none;
+            transition: background 0.3s ease;
+        }
+
+        .preference-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preference-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .preference-slider::-webkit-slider-thumb:hover {
+            background: var(--secondary-color);
+            transform: scale(1.1);
+        }
+
+        .preference-slider::-moz-range-thumb:hover {
+            background: var(--secondary-color);
+            transform: scale(1.1);
+        }
+
+        .slider-value {
+            text-align: right;
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* 可拖动模态框的样式 */
+        .modal-content, .preferences-content, .account-info-content, .reset-password-content {
+            cursor: move;
+            user-select: none;
+            position: relative;
+        }
+
+        /* 模态框标题区域样式 */
+        .modal-header, .preferences-header, .account-info-header, .reset-password-header {
+            cursor: move;
+            padding: 1rem;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 添加引用按钮 -->
+    <div class="quote-button" id="quote-button">
+        <i class="fas fa-quote-right"></i>
+        <span>引用</span>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <!-- 添加登录/注册按钮 -->
+        <div class="auth-buttons">
+            <button class="auth-button login-button">
+                <i class="fas fa-sign-in-alt"></i>
+                登录
+            </button>
+            <button class="auth-button register-button">
+                <i class="fas fa-user-plus"></i>
+                注册
+            </button>
+        </div>
+        <button id="start-new-conversation">
+            <i class="fas fa-plus"></i> New Chat
+        </button>
+        <!-- 添加搜索框容器 -->
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="history-search" placeholder="搜索对话...">
+                <i class="fas fa-times clear-search" id="clear-search"></i>
+            </div>
+        </div>
+        <div class="history-container" id="history-container"></div>
+        <div class="social-links">
+            <p class="social-title">联系开发者？</p>
+            <div class="social-icons">
+                <a href="https://account.bilibili.com/account/home?spm_id_from=333.1007.0.0" target="_blank" class="social-icon">
+                    <svg class="bilibili-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M777.514667 131.669333a53.333333 53.333333 0 0 1 0 75.434667L728.746667 255.829333h49.92A160 160 0 0 1 938.666667 415.829333v320a160 160 0 0 1-160 160H245.333333A160 160 0 0 1 85.333333 735.829333v-320a160 160 0 0 1 160-160h49.749334L246.4 207.104a53.333333 53.333333 0 1 1 75.392-75.434667l113.152 113.152c3.370667 3.370667 6.186667 7.04 8.448 10.965334h137.088c2.261333-3.925333 5.12-7.594667 8.490667-10.965334l113.109333-113.152a53.333333 53.333333 0 0 1 75.434667 0z m1.152 231.253334H245.333333a53.333333 53.333333 0 0 0-53.333333 53.333333v320a53.333333 53.333333 0 0 0 53.333333 53.333333h533.333334a53.333333 53.333333 0 0 0 53.333333-53.333333v-320a53.333333 53.333333 0 0 0-53.333333-53.333333zM341.333333 469.333333a53.333333 53.333333 0 1 1 0 106.666667 53.333333 53.333333 0 0 1 0-106.666667z m341.333334 0a53.333333 53.333333 0 1 1 0 106.666667 53.333333 53.333333 0 0 1 0-106.666667z"></path>
+                    </svg>
+                </a>
+                <a href="https://www.douyin.com/user/self?from_tab_name=main&showTab=like" target="_blank" class="social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="https://github.com/theWDY" target="_blank" class="social-icon">
+                    <i class="fab fa-github"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <button class="toggle-sidebar" id="toggle-sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- 主聊天区域 -->
+    <div class="main-container">
+        <div class="chat-container">
+            <div class="header">
+                AI Assistant
+                <button id="theme-toggle" class="theme-toggle">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+            <div class="chat-history" id="chat-history"></div>
+
+            <div class="input-container">
+                <div class="quote-container" id="quote-container"></div>
+                <div class="input-controls">
+                    <select id="search-toggle">
+                        <option value="no">No Search</option>
+                        <option value="yes">Enable Search</option>
+                    </select>
+
+                    <!-- Kimi Models -->
+                    <select id="model">
+                        <!-- Kimi Models -->
+                        <optgroup label="Kimi Models">
+                            <option value="moonshot-v1-8k" data-model-family="kimi">moonshot-v1-8k</option>
+                            <option value="moonshot-v1-32k" data-model-family="kimi">moonshot-v1-32k</option>
+                            <option value="moonshot-v1-128k" data-model-family="kimi">moonshot-v1-128k</option>
+                        </optgroup>
+                        <!-- DeepSeek Models -->
+                        <optgroup label="DeepSeek Models">
+                            <option value="deepseek-chat" data-model-family="deepseek">deepseek-chat</option>
+                            <option value="deepseek-reasoner" data-model-family="deepseek">deepseek-reasoner</option>
+                        </optgroup>
+                    </select>
+
+                    <script>
+                        // 记录当前对话使用的模型系列
+                        let currentModelFamily = null;
+
+                        // 控制搜索功能和文件上传功能的可用性
+                        document.getElementById('model').addEventListener('change', function() {
+                            const searchToggle = document.getElementById('search-toggle');
+                            const fileUpload = document.getElementById('file-upload');
+                            const fileUploadLabel = document.querySelector('.file-upload-label');
+                            const uploadedFiles = document.getElementById('uploaded-files');
+                            const selectedModel = this.value;
+                            const selectedOption = this.options[this.selectedIndex];
+                            const selectedModelFamily = selectedOption.getAttribute('data-model-family');
+                            
+                            // 检查是否为第一次提问
+                            if (currentModelFamily === null) {
+                                // 第一次提问，设置当前对话的模型系列
+                                currentModelFamily = selectedModelFamily;
+                            } else if (currentModelFamily !== selectedModelFamily) {
+                                // 不是第一次提问，且选择了不同系列的模型
+                                alert('在同一个对话中只能使用同一系列的模型！');
+                                // 恢复到同系列的第一个模型
+                                for (let i = 0; i < this.options.length; i++) {
+                                    if (this.options[i].getAttribute('data-model-family') === currentModelFamily) {
+                                        this.selectedIndex = i;
+                                        selectedModel = this.options[i].value;
+                                        break;
+                                    }
+                                }
+                                return;
+                            }
+                            
+                            // 检查是否为Kimi系列模型
+                            const isKimiModel = selectedModel.startsWith('moonshot');
+                            
+                            // 设置搜索选项的可用性
+                            searchToggle.disabled = !isKimiModel;
+                            
+                            // 设置文件上传功能的可用性
+                            fileUpload.disabled = !isKimiModel;
+                            if (!isKimiModel) {
+                                fileUploadLabel.style.opacity = '0.5';
+                                fileUploadLabel.style.cursor = 'not-allowed';
+                                // 清空已上传的文件列表
+                                uploadedFiles.innerHTML = '';
+                                // 重置文件输入框
+                                fileUpload.value = '';
+                                
+                                // 发送请求到后端清除文件路径
+                                fetch('/clear_files', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    }
+                                }).catch(error => {
+                                    console.error('Error clearing files:', error);
+                                });
+                            } else {
+                                fileUploadLabel.style.opacity = '1';
+                                fileUploadLabel.style.cursor = 'pointer';
+                            }
+                            
+                            // 如果不是Kimi模型，强制设置为"No Search"
+                            if (!isKimiModel) {
+                                searchToggle.value = 'no';
+                            }
+                        });
+
+                        // 页面加载时进行初始检查
+                        window.addEventListener('load', function() {
+                            const modelSelect = document.getElementById('model');
+                            const searchToggle = document.getElementById('search-toggle');
+                            const fileUpload = document.getElementById('file-upload');
+                            const fileUploadLabel = document.querySelector('.file-upload-label');
+                            const uploadedFiles = document.getElementById('uploaded-files');
+                            const selectedModel = modelSelect.value;
+                            
+                            // 检查是否为Kimi系列模型
+                            const isKimiModel = selectedModel.startsWith('moonshot');
+                            
+                            // 设置搜索选项的可用性
+                            searchToggle.disabled = !isKimiModel;
+                            
+                            // 设置文件上传功能的可用性
+                            fileUpload.disabled = !isKimiModel;
+                            if (!isKimiModel) {
+                                fileUploadLabel.style.opacity = '0.5';
+                                fileUploadLabel.style.cursor = 'not-allowed';
+                                // 清空已上传的文件列表
+                                uploadedFiles.innerHTML = '';
+                                // 重置文件输入框
+                                fileUpload.value = '';
+                                
+                                // 发送请求到后端清除文件路径
+                                fetch('/clear_files', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    }
+                                }).catch(error => {
+                                    console.error('Error clearing files:', error);
+                                });
+                            } else {
+                                fileUploadLabel.style.opacity = '1';
+                                fileUploadLabel.style.cursor = 'pointer';
+                            }
+                            
+                            // 如果不是Kimi模型，强制设置为"No Search"
+                            if (!isKimiModel) {
+                                searchToggle.value = 'no';
+                            }
+                        });
+                    </script>
+
+                    <input type="text" id="input" placeholder="Send a message..." required>
+                    <button id="send-button">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="file-upload">
+                <label class="file-upload-label">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Upload Files
+                    <input type="file" id="file-upload" multiple>
+                </label>
+                <div class="uploaded-files" id="uploaded-files"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 在主容器的最后添加设置按钮和弹出菜单 -->
+    <div class="settings-container">
+        <button class="settings-button" id="settingsButton">
+            <i class="fas fa-cog"></i>
+        </button>
+        <div class="settings-menu" id="settingsMenu">
+            <button class="settings-menu-item" id="accountInfo">
+                <i class="fas fa-user"></i>
+                账户信息
+            </button>
+            <button class="settings-menu-item" id="preferences">
+                <i class="fas fa-sliders-h"></i>
+                个人偏好
+            </button>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="dialog-overlay"></div>
+    <div class="confirm-dialog" id="confirm-dialog">
+        <p>你确定要删除此历史对话吗？</p>
+        <div class="dialog-buttons">
+            <button class="confirm-yes">是</button>
+            <button class="confirm-no">否</button>
+        </div>
+    </div>
+
+    <!-- 登录模态框 -->
+    <div class="modal" id="login-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('login-modal')">&times;</span>
+            <form class="auth-form" id="login-form">
+                <h2>登录</h2>
+                <div class="form-group">
+                    <label for="login-username">用户名</label>
+                    <input type="text" id="login-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">密码</label>
+                    <input type="password" id="login-password" required>
+                    <a class="forgot-password" id="forgot-password">
+                        <i class="fas fa-key"></i> 忘记密码？
+                    </a>
+                </div>
+                <button type="submit">登录</button>
+                <div class="form-footer">
+                    还没有账号？<a onclick="switchModal('login-modal', 'register-modal')">立即注册</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div class="modal" id="register-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('register-modal')">&times;</span>
+            <form class="auth-form" id="register-form">
+                <h2>注册</h2>
+                <div class="form-group">
+                    <label for="register-username">用户名</label>
+                    <input type="text" id="register-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">邮箱</label>
+                    <div class="email-group">
+                        <input type="email" id="register-email" required>
+                        <button type="button" id="send-code-btn" class="send-code-btn">
+                            发送验证码
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="register-verification-code">验证码</label>
+                    <input type="text" id="register-verification-code" maxlength="6" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">密码</label>
+                    <input type="password" id="register-password" required>
+                    <div class="password-strength">
+                        <div class="strength-meter">
+                            <div id="strength-bar"></div>
+                        </div>
+                        <div class="password-requirements">
+                            <div class="requirement" id="length-req">
+                                <i class="fas fa-circle"></i>
+                                <span>至少8个字符</span>
+                            </div>
+                            <div class="requirement" id="uppercase-req">
+                                <i class="fas fa-circle"></i>
+                                <span>至少1个大写字母</span>
+                            </div>
+                            <div class="requirement" id="lowercase-req">
+                                <i class="fas fa-circle"></i>
+                                <span>至少1个小写字母</span>
+                            </div>
+                            <div class="requirement" id="number-req">
+                                <i class="fas fa-circle"></i>
+                                <span>至少1个数字</span>
+                            </div>
+                            <div class="requirement" id="special-req">
+                                <i class="fas fa-circle"></i>
+                                <span>至少1个特殊字符</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="register-confirm-password">确认密码</label>
+                    <input type="password" id="register-confirm-password" required>
+                </div>
+                <button type="submit">注册</button>
+                <div class="form-footer">
+                    已有账号？<a onclick="switchModal('register-modal', 'login-modal')">立即登录</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 账户信息模态框 -->
+    <div class="account-info-modal" id="account-info-modal">
+        <div class="account-info-content">
+            <div class="account-info-header">
+                <h2>账户信息</h2>
+                <span class="account-info-close">&times;</span>
+            </div>
+            <!-- 添加头像上传区域 -->
+            <div class="avatar-container">
+                <div class="avatar-preview">
+                    <img id="avatarPreview" src="/static/avatars/default_avatar.png" alt="用户头像">
+                </div>
+                <input type="file" id="avatarInput" class="avatar-upload-input" accept="image/*">
+                <button class="avatar-upload-btn" onclick="document.getElementById('avatarInput').click()">
+                    更换头像
+                </button>
+            </div>
+            <div class="account-info-item">
+                <label>用户名</label>
+                <div class="value" id="account-username">暂无</div>
+            </div>
+            <div class="account-info-item">
+                <label>绑定邮箱</label>
+                <div class="value" id="account-email">暂无</div>
+            </div>
+            <div class="account-info-item">
+                <label>密码</label>
+                <div class="value" id="account-password">********</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 忘记密码模态框 -->
+    <div id="resetPasswordModal" class="reset-password-modal">
+        <div class="reset-password-content">
+            <div class="reset-password-header">
+                <h2>找回密码</h2>
+                <span class="reset-password-close">&times;</span>
+            </div>
+            <div class="reset-password-form">
+                <input type="text" id="resetUsername" placeholder="请输入用户名">
+                <input type="email" id="resetEmail" placeholder="请输入注册邮箱">
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="resetCode" placeholder="请输入验证码" style="flex: 1;">
+                    <button id="sendResetCode">发送验证码</button>
+                </div>
+                <button id="verifyResetCode">验证</button>
+                <div id="resetPasswordResult" class="reset-password-result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 在账户信息模态框后添加个人偏好模态框 -->
+    <div class="preferences-modal" id="preferences-modal">
+        <div class="preferences-content">
+            <div class="preferences-header">
+                <h2>个人偏好设置</h2>
+                <span class="preferences-close">&times;</span>
+            </div>
+            <div class="preference-item">
+                <p>该参数越大，模型回答越随机，该参数越小，模型回答越集中与确定。</p>
+                <div class="slider-container">
+                    <input type="range" class="preference-slider" id="randomness-slider" 
+                           min="0" max="1" step="0.1" value="0.3">
+                    <div class="slider-value">0.3</div>
+                </div>
+            </div>
+            <div class="preference-item">
+                <p>该参数越大，模型回答中讨论新话题的可能性越大</p>
+                <div class="slider-container">
+                    <input type="range" class="preference-slider" id="topic-slider" 
+                           min="-2" max="2" step="0.1" value="0">
+                    <div class="slider-value">0</div>
+                </div>
+            </div>
+            <div class="preference-item">
+                <p>该参数越大，模型减少一字不差重复同样话语的可能性</p>
+                <div class="slider-container">
+                    <input type="range" class="preference-slider" id="repetition-slider" 
+                           min="-2" max="2" step="0.1" value="0">
+                    <div class="slider-value">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // 添加引用功能
+            let quoteButton = $('#quote-button');
+            let selectedText = '';
+
+            // 监听选择文本事件
+            $(document).on('mouseup', '.bot-message .message-content', function(e) {
+                const selection = window.getSelection();
+                const text = selection.toString().trim();
+
+                if (text) {
+                    selectedText = text;
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+
+                    // 定位引用按钮
+                    quoteButton.css({
+                        top: rect.top - 40 + window.scrollY + 'px',
+                        left: rect.left + (rect.width / 2) - (quoteButton.width() / 2) + 'px',
+                        display: 'flex'
+                    });
+                } else {
+                    hideQuoteButton();
+                }
+            });
+
+            // 点击其他地方时隐藏引用按钮
+            $(document).on('mousedown', function(e) {
+                if (!$(e.target).closest('.quote-button').length) {
+                    hideQuoteButton();
+                }
+            });
+
+            // 点击引用按钮添加引用
+            quoteButton.on('click', function() {
+                if (selectedText) {
+                    addQuote(selectedText);
+                    hideQuoteButton();
+                }
+            });
+
+            // 隐藏引用按钮
+            function hideQuoteButton() {
+                quoteButton.hide();
+                selectedText = '';
+            }
+
+            // 添加引用到输入框
+            function addQuote(text) {
+                const quoteItem = $(`
+                    <div class="quote-item">
+                        <span class="quote-text">${text}</span>
+                        <i class="fas fa-times quote-remove"></i>
+                    </div>
+                `);
+
+                $('#quote-container').append(quoteItem);
+                updateInputWithQuotes();
+            }
+
+            // 删除引用
+            $(document).on('click', '.quote-remove', function() {
+                $(this).closest('.quote-item').remove();
+                updateInputWithQuotes();
+            });
+
+            // 更新输入框中的引用内容
+            function updateInputWithQuotes() {
+                // 不再在输入框中添加引用内容
+                return;
+            }
+
+            // 添加回车键发送消息的功能
+            $('#input').on('keypress', function(e) {
+                if (e.which === 13 && $(this).val().trim()) {  // 13是回车键的keyCode
+                    e.preventDefault();  // 阻止默认的回车行为
+                    $('#send-button').click();  // 触发发送按钮的点击事件
+                }
+            });
+
+            // 添加一个变量来存储当前的fetch请求
+            let currentRequest = null;
+
+            // 添加一个函数来取消当前请求并清理状态
+            function cancelCurrentRequest() {
+                if (currentRequest) {
+                    set_stop("True")
+                        .then(() => {
+                            // 使用与正常回答相同的样式显示中断消息
+                            const lastBotMessage = $('#chat-history .bot-message:last .message-content').text().trim();
+                            if (lastBotMessage) {
+                                currentConversation.push({
+                                    bot: lastBotMessage
+                                });
+                            }
+                            $('#chat-history').append(`
+                                <div class="chat-message bot-message">
+                                    <div class="message-avatar bot-avatar">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        回答已被中断
+                                    </div>
+                                </div>
+                            `);
+                            $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+
+                            // 将中断消息添加到对话历史中
+                            currentConversation.push({
+                                bot: "回答已被中断"
+                            });
+
+                            // 更新history数组中的对话
+                            const index = history.findIndex(conv => conv === currentConversation);
+                            if (index !== -1) {
+                                history[index] = currentConversation;
+                            }
+                        });
+                    currentRequest.abort();
+                    currentRequest = null;
+                    $('#send-button').text('Send');
+                    $('#send-button').off('mouseenter mouseleave');
+                }
+            }
+
+            // 添加侧边栏切换功能
+            $('#toggle-sidebar').click(function() {
+                $('#sidebar').toggleClass('sidebar-collapsed');
+                $(this).toggleClass('collapsed');
+            });
+
+            let history = [];
+
+            let currentConversation = [];
+
+            set_index(0)//一开始将当前的历史记忆索引设为0
+
+            // 点击开启新对话
+            $('#start-new-conversation').on('click', function() {
+                // 如果当前有请求在进行中，先处理中断
+                if (currentRequest) {
+                    // 将中断消息添加到当前对话
+                    currentConversation.push({
+                        bot: "回答已被中断"
+                    });
+                    $('#chat-history').append(`
+                        <div class="chat-message bot-message">
+                            <div class="message-avatar bot-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                回答已被中断
+                            </div>
+                        </div>
+                    `);
+                    $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                    
+                    set_stop("True");
+                    currentRequest.abort();
+                    currentRequest = null;
+                    $('#send-button').text('Send');
+                    $('#send-button').off('mouseenter mouseleave');
+                }
+
+                // 重置当前对话的模型系列
+                currentModelFamily = null;
+
+                // 清空已上传的文件和显示
+                $('#uploaded-files').html('');
+                $('#file-upload').val('');
+
+                // 清空输入框
+                $('#input').val('');
+
+                // 重置选择器
+                $('#model').val('moonshot-v1-8k');  // 重置为默认模型
+                $('#search-toggle').val('no');      // 重置搜索开关
+
+                // 保存当前对话（如果有内容）
+                if (currentConversation.length > 0) {
+                    const index = history.findIndex(function(conv) {
+                        return conv === currentConversation;
+                    });
+
+                    if (index === -1) {  // 如果是新对话
+                        const tempIndex = history.length;
+                        const tempTitle = `对话 ${tempIndex + 1}`;
+                        currentConversation.summary = tempTitle;
+                        history.push(currentConversation);
+                        updateHistory();
+                        generateSummaryForConversation(currentConversation, tempIndex);
+                    } else {
+                        const currentSummary = history[index].summary || '';
+                        if (currentSummary.startsWith('对话 ')) {
+                            generateSummaryForConversation(currentConversation, index);
+                        }
+                    }
+                }
+
+                // 清空当前聊天记录和对话
+                currentConversation = [];
+                $('#chat-history').html('');
+
+                // 移除所有历史对话项的选中状态
+                $('.history-item').removeClass('current');
+
+                // 获取新对话的索引（一定要在可能添加新对话到历史记录之后）
+                const newIndex = history.length;
+                
+                // 强制触发 set_index，即使 newIndex 与当前索引相同
+                set_index(newIndex).then(() => {
+                    // 更新历史记录显示
+                    updateHistory();
+                });
+            });
+
+
+            // 发送信息
+            $('#send-button').on('click', function(e) {
+                e.preventDefault();
+
+                if ($(this).text() === 'Stop?') {
+                    // 先发送停止请求
+                    fetch('/set_stop', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            input1: "True"
+                        })
+                    }).then(() => {
+                        // 获取当前已生成的回复
+                        const currentResponse = botMessageDiv.find('.message-content').html();
+                        
+                        // 如果有部分回复，保存它
+                        if (currentResponse) {
+                            currentConversation.push({
+                                bot: currentResponse,
+                                model: $('#model').val()  // 记录使用的模型
+                            });
+                            
+                            // 添加中断消息
+                            currentConversation.push({
+                                bot: "回答已被中断",
+                                model: $('#model').val()  // 记录使用的模型
+                            });
+                            
+                            // 显示中断消息
+                            $('#chat-history').append(`
+                                <div class="chat-message bot-message">
+                                    <div class="message-avatar bot-avatar">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div class="message-content">
+                                        回答已被中断
+                                    </div>
+                                </div>
+                            `);
+                            $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                        }
+                        
+                        // 最后才中止请求
+                        if (currentRequest) {
+                            currentRequest.abort();
+                            currentRequest = null;
+                        }
+                    });
+                    
+                    // 重置按钮状态
+                    $(this).text('Send');
+                    $(this).off('mouseenter mouseleave');
+                    return;
+                }
+
+                var userInput = $('#input').val();
+                if (!userInput.trim()) return;
+
+                // 获取当前选择的模型和模型系列
+                const currentSelectedModel = $('#model').val();
+                const selectedOption = document.getElementById('model').options[document.getElementById('model').selectedIndex];
+                const selectedModelFamily = selectedOption.getAttribute('data-model-family');
+
+                // 如果是第一次提问，设置当前对话的模型系列
+                if (currentModelFamily === null) {
+                    currentModelFamily = selectedModelFamily;
+                } else if (currentModelFamily !== selectedModelFamily) {
+                    // 如果尝试使用不同系列的模型，阻止发送并提示用户
+                    alert('在同一个对话中只能使用同一系列的模型！');
+                    // 恢复到同系列的第一个模型
+                    const modelSelect = document.getElementById('model');
+                    for (let i = 0; i < modelSelect.options.length; i++) {
+                        if (modelSelect.options[i].getAttribute('data-model-family') === currentModelFamily) {
+                            modelSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    return;
+                }
+
+                // 获取已上传文件的名称列表
+                const uploadedFiles = Array.from($('#uploaded-files .uploaded-file-item')).map(item =>
+                    $(item).find('.file-info span').text()
+                );
+
+                // 获取引用的内容
+                let quotes = [];
+                $('.quote-item').each(function() {
+                    quotes.push($(this).find('.quote-text').text());
+                });
+
+                // 如果有引用内容，添加追问前缀
+                let finalInput = userInput;
+                if (quotes.length > 0) {
+                    const quotedContent = quotes.join('，');
+                    finalInput = `针对你上文提及的${quotedContent}，我发送以下问题：${userInput}`;
+                }
+
+                // 构建用户消息的完整内容
+                let messageContent = `
+                    <div class="message-content">
+                        ${userInput}
+                        ${generateMetaInfo($('#search-toggle').val() === 'yes', uploadedFiles, quotes)}
+                    </div>
+                `;
+
+                // 显示用户消息
+                $('#chat-history').append(`
+                    <div class="chat-message user-message" data-message-index="${currentConversation.length}">
+                        <div class="message-avatar user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="message-content">
+                            <button class="message-edit-btn" title="编辑消息">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            ${userInput}
+                            ${generateMetaInfo($('#search-toggle').val() === 'yes', uploadedFiles, quotes)}
+                        </div>
+                    </div>
+                `);
+                $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                $('#input').val('');
+
+                // 清空已上传文件显示
+                $('#uploaded-files').html('');
+                $('#file-upload').val('');
+
+                // 清空引用
+                $('#quote-container').empty();
+
+                // 先将用户问题保存到临时变量并添加到对话历史
+                currentConversation.push({
+                    user: userInput,
+                    hasSearch: $('#search-toggle').val() === 'yes',
+                    uploadedFiles: uploadedFiles,
+                    quotes: quotes
+                });
+
+                // 更新history数组中的对话
+                const historyIndex = history.findIndex(conv => conv === currentConversation);
+                if (historyIndex !== -1) {
+                    history[historyIndex] = currentConversation;
+                }
+
+                $('#send-button').text('Thinking...');
+                $('#send-button').off('mouseenter mouseleave');
+                $('#send-button').on('mouseenter', function() {
+                    if ($(this).text() === 'Thinking...') {
+                        $(this).text('Stop?');
+                    }
+                }).on('mouseleave', function() {
+                    if ($(this).text() === 'Stop?') {
+                        $(this).text('Thinking...');
+                    }
+                });
+
+                var selectedModel = $('#model').val();
+                var searchToggle = $('#search-toggle').val();
+
+                // 创建AbortController用于取消请求
+                const controller = new AbortController();
+                currentRequest = controller;
+
+                // 创建EventSource来处理服务器发送的事件
+                const response = fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        input: finalInput,
+                        model: selectedModel,
+                        'search-toggle': searchToggle
+                    }),
+                    signal: controller.signal  // 添加signal用于取消请求
+                });
+
+                // 处理响应
+                response.then(response => {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let botMessage = '';
+                    let botMessageDiv = $(`
+                        <div class="chat-message bot-message">
+                            <div class="message-avatar bot-avatar">
+                                <img src="${getModelAvatar($('#model').val())}" alt="Bot Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                            </div>
+                            <div class="message-content">
+                                <button class="message-copy-btn" title="复制消息">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                                <div class="bot-response"></div>
+                            </div>
+                        </div>
+                    `).appendTo('#chat-history');
+
+                    function readStream() {
+                        reader.read().then(({done, value}) => {
+                            if (done) {
+                                currentRequest = null;
+                                $('#send-button').text('Send');
+                                $('#send-button').off('mouseenter mouseleave');
+                                if (botMessage) {
+                                    // 无论是正常回复还是错误消息，都保存到对话历史中
+                                    currentConversation.push({
+                                        bot: botMessage,
+                                        model: $('#model').val()  // 添加这一行，记录使用的模型
+                                    });
+                                    // 更新history数组中的对话
+                                    const index = history.findIndex(conv => conv === currentConversation);
+                                    if (index !== -1) {
+                                        history[index] = currentConversation;
+                                    }
+                                }
+                                return;
+                            }
+
+                            const chunk = decoder.decode(value);
+                            const lines = chunk.split('\n');
+                            
+                            lines.forEach(line => {
+                                if (line.startsWith('data: ')) {
+                                    try {
+                                        const data = JSON.parse(line.slice(6));
+                                        if (!data.done) {
+                                            botMessage += data.reply;
+                                            botMessageDiv.find('.bot-response').html(botMessage);
+                                            $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing SSE data:', e);
+                                    }
+                                }
+                            });
+
+                            readStream();
+                        }).catch(error => {
+                            console.error('Error reading stream:', error);
+                            currentRequest = null;
+                            $('#send-button').text('Send');
+                            $('#send-button').off('mouseenter mouseleave');
+                            // 在发生错误时也保存错误消息
+                            const errorMessage = '发生错误，请稍后重试';
+                            currentConversation.push({
+                                bot: errorMessage
+                            });
+                            // 更新history数组中的对话
+                            const index = history.findIndex(conv => conv === currentConversation);
+                            if (index !== -1) {
+                                history[index] = currentConversation;
+                            }
+                            // 显示错误消息
+                            botMessageDiv.find('.bot-response').html(errorMessage);
+                        });
+                    }
+
+                    readStream();
+                }).catch(error => {
+                    console.error('Error:', error);
+                    const errorMessage = 'Error communicating with the server.';
+                    // 在发生错误时保存错误消息
+                    currentConversation.push({
+                        bot: errorMessage
+                    });
+                    // 更新history数组中的对话
+                    const index = history.findIndex(conv => conv === currentConversation);
+                    if (index !== -1) {
+                        history[index] = currentConversation;
+                    }
+                    alert(errorMessage);
+                    currentRequest = null;
+                    $('#send-button').text('Send');
+                    $('#send-button').off('mouseenter mouseleave');
+                });
+            });
+
+            // 文件上传
+            $('#file-upload').on('change', function(e) {
+                var files = e.target.files;
+                var formData = new FormData();
+                var uploadedFilesDiv = $('#uploaded-files');
+                var fileList = Array.from(files);  // 转换为数组以便操作
+
+                // 始终显示所有文件
+                var fileElements = fileList.map(function(file, index) {
+                    const iconClass = getFileIcon(file.name);
+                    // 处理空文件名的情况
+                    let displayName = file.name;
+                    if (!displayName || displayName.trim() === '') {
+                        // 如果文件名完全为空，生成新名称
+                        displayName = `unnamed_file_${index}`;
+                    }
+                    return `
+                        <div class="uploaded-file-item" data-file-index="${index}">
+                            <div class="file-info">
+                                <i class="fas ${iconClass}"></i>
+                                <span title="${displayName}">${displayName}</span>
+                            </div>
+                            <i class="fas fa-times file-remove-btn"></i>
+                        </div>
+                    `;
+                });
+                uploadedFilesDiv.html(fileElements.join(''));
+
+                // 处理文件上传
+                fileList.forEach(file => {
+                    formData.append('files[]', file);
+                });
+
+                // 添加文件删除功能
+                $('.file-remove-btn').on('click', function(e) {
+                    e.preventDefault();
+                    const fileItem = $(this).closest('.uploaded-file-item');
+                    const fileIndex = fileItem.data('file-index');
+
+                    // 从 FormData 和显示列表中移除文件
+                    fileList.splice(fileIndex, 1);
+                    fileItem.remove();
+
+                    // 更新全局变量
+                    add_files = fileList.length;
+
+                    // 如果所有文件都被移除，清空文件输入
+                    if (fileList.length === 0) {
+                        $('#file-upload').val('');
+                        uploadedFilesDiv.html('');
+                    }
+
+                    // 重新构建 FormData
+                    formData = new FormData();
+                    fileList.forEach(file => {
+                        formData.append('files[]', file);
+                    });
+
+                    // 如果还有文件，重新上传
+                    if (fileList.length > 0) {
+                        $.ajax({
+                            url: '/upload',
+                            method: 'POST',
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            success: function(response) {
+                                console.log('Files updated successfully');
+                            },
+                            error: function() {
+                                alert('File update failed');
+                                uploadedFilesDiv.html('');
+                                $('#file-upload').val('');
+                            }
+                        });
+                    }
+                });
+
+                // 上传文件到服务器
+                if (fileList.length > 0) {
+                    $.ajax({
+                        url: '/upload',
+                        method: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            console.log('Files uploaded successfully');
+                        },
+                        error: function() {
+                            alert('File upload failed');
+                            uploadedFilesDiv.html('');
+                            $('#file-upload').val('');
+                        }
+                    });
+                }
+            });
+
+            // 修改历史对话切换的处理
+            $(document).on('click', '.history-item', function() {
+                // 如果当前有请求在进行中，先处理中断
+                if (currentRequest) {
+                    set_stop("True")
+                        .then(() => {
+                            // 使用与正常回答相同的样式显示中断消息
+                            const lastBotMessage = $('#chat-history .bot-message:last .message-content').text().trim();
+                            if (lastBotMessage) {
+                                currentConversation.push({
+                                    bot: lastBotMessage
+                                });
+                            }
+                            $('#chat-history').append(`
+                                <div class="chat-message bot-message">
+                                    <div class="message-avatar bot-avatar">
+                                        <img src="${getModelAvatar($('#model').val())}" alt="Bot Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                                    </div>
+                                    <div class="message-content">
+                                        回答已被中断
+                                    </div>
+                                </div>
+                            `);
+                            $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+
+                            // 将中断消息添加到对话历史中
+                            currentConversation.push({
+                                bot: "回答已被中断",
+                                model: $('#model').val()  // 添加这一行，记录使用的模型
+                            });
+
+                            // 更新history数组中的对话
+                            const index = history.findIndex(conv => conv === currentConversation);
+                            if (index !== -1) {
+                                history[index] = currentConversation;
+                            }
+                        });
+                    currentRequest.abort();
+                    currentRequest = null;
+                    $('#send-button').text('Send');
+                    $('#send-button').off('mouseenter mouseleave');
+                }
+
+                // 重置当前对话的模型系列
+                currentModelFamily = null;
+
+                // 清空已上传的文件和显示
+                $('#uploaded-files').html('');
+                $('#file-upload').val('');
+
+                // 清空输入框
+                $('#input').val('');
+
+                // 重置选择器
+                $('#model').val('moonshot-v1-8k');  // 重置为默认模型
+                $('#search-toggle').val('no');      // 重置搜索开关
+
+                // 保存当前对话
+                if (currentConversation.length > 0) {
+                    const existingIndex = history.findIndex(function(conv) {
+                        return conv === currentConversation;
+                    });
+
+                    if (existingIndex === -1) {
+                        const tempIndex = history.length;
+                        const tempTitle = `对话 ${tempIndex + 1}`;
+                        currentConversation.summary = tempTitle;
+                        history.push(currentConversation);
+                        set_index(history.length);
+                        updateHistory();
+                        generateSummaryForConversation(currentConversation, tempIndex);
+                    } else {
+                        const currentSummary = history[existingIndex].summary || '';
+                        if (currentSummary.startsWith('对话 ')) {
+                            generateSummaryForConversation(currentConversation, existingIndex);
+                        }
+                    }
+                }
+
+                var index = $(this).data('index');
+                var conversation = history[index];
+                currentConversation = conversation;
+
+                // 根据对话历史中的消息设置当前模型系列
+                currentModelFamily = null;
+                for (let msg of conversation) {
+                    if (msg.model) {
+                        const modelSelect = document.getElementById('model');
+                        for (let option of modelSelect.options) {
+                            if (option.value === msg.model) {
+                                currentModelFamily = option.getAttribute('data-model-family');
+                                // 设置选择框为对应的模型
+                                modelSelect.value = msg.model;
+                                break;
+                            }
+                        }
+                        if (currentModelFamily) break;
+                    }
+                }
+
+                set_index(index);
+
+                // 恢复对话内容的显示
+                $('#chat-history').html('');
+
+                // 创建一个Set来跟踪已显示的消息
+                const displayedMessages = new Set();
+
+                // 按顺序显示所有对话
+                for (let i = 0; i < conversation.length; i++) {
+                    const msg = conversation[i];
+                    // 修改消息ID的生成方式，为错误消息添加索引
+                    const msgId = msg.user 
+                        ? `user-${msg.user}-${i}` 
+                        : (msg.bot && (msg.bot.includes('请求过于频繁') || msg.bot.includes('发生错误') || msg.bot.includes('上下文过长'))
+                            ? `bot-error-${i}`  // 错误消息使用索引作为唯一标识
+                            : `bot-${msg.bot}`);  // 普通消息保持原有的去重逻辑
+                    
+                    // 如果消息已经显示过，则跳过
+                    if (displayedMessages.has(msgId)) continue;
+                    displayedMessages.add(msgId);
+
+                    if (msg.user) {
+                        // 显示用户消息
+                        displayMessageGroup(msg, []);
+                    } else if (msg.bot) {
+                        // 显示机器人消息，无论是正常回复还是错误消息
+                        $('#chat-history').append(`
+                            <div class="chat-message bot-message">
+                                <div class="message-avatar bot-avatar">
+                                    <img src="${getModelAvatar(msg.model || $('#model').val())}" alt="Bot Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                                </div>
+                                <div class="message-content">
+                                    <button class="message-copy-btn" title="复制消息">
+                                        <i class="far fa-copy"></i>
+                                    </button>
+                                    ${msg.bot}
+                                </div>
+                            </div>
+                        `);
+                    }
+                }
+
+                // 滚动到最新消息
+                $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+
+                // 更新历史记录显示
+                updateHistory();
+            });
+
+            // 添加一个辅助函数来显示消息组
+            function displayMessageGroup(userMsg, botMsgs) {
+                // 显示用户消息
+                $('#chat-history').append(`
+                    <div class="chat-message user-message" data-message-index="${currentConversation.indexOf(userMsg)}">
+                        <div class="message-avatar user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="message-content">
+                            <button class="message-edit-btn" title="编辑消息">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            ${userMsg.user}
+                            ${generateMetaInfo(userMsg.hasSearch, userMsg.uploadedFiles, userMsg.quotes)}
+                        </div>
+                    </div>
+                `);
+
+                // 显示所有机器人回复
+                for (const botMsg of botMsgs) {
+                    $('#chat-history').append(`
+                        <div class="chat-message bot-message">
+                            <div class="message-avatar bot-avatar">
+                                <img src="${getModelAvatar(botMsg.model || $('#model').val())}" alt="Bot Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                            </div>
+                            <div class="message-content">
+                                <button class="message-copy-btn" title="复制消息">
+                                    <i class="far fa-copy"></i>
+                                </button>
+                                ${botMsg.bot}
+                            </div>
+                        </div>
+                    `);
+                }
+            }
+
+            // 更新历史记录的显示
+            function updateHistory() {
+                const historyContainer = $('#history-container');
+                if (history.length === 0) {
+                    historyContainer.removeClass('has-items');
+                    historyContainer.html('');
+                } else {
+                    historyContainer.addClass('has-items');
+                    historyContainer.html('');
+                    history.forEach(function(conversation, index) {
+                        const title = conversation.summary || `对话 ${index + 1}`;
+                        const isCurrentChat = conversation === currentConversation;
+                        const isManuallyEdited = conversation.isManuallyEdited || false; // 添加手动编辑标记
+                        historyContainer.append(`
+                            <div class="history-item ${isCurrentChat ? 'current' : ''}" data-index="${index}">
+                                <span class="title">${title}</span>
+                                <div class="current-chat-indicator"></div>
+                                <i class="fas fa-pencil-alt edit-btn" title="编辑摘要"></i>
+                                <i class="fas fa-times delete-btn"></i>
+                            </div>
+                        `);
+                    });
+                }
+            }
+
+
+            // 处理当前的history_index
+            function set_index(index){//设置后端使用的历史记忆的索引
+
+                var data={
+                    input1:index,
+                }
+
+                fetch('http://127.0.0.1:5000/set_index', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'  // 发送数据时告知后端这是 JSON 格式
+                    },
+                    body: JSON.stringify(data)  // 将数据转换为 JSON 字符串
+                })
+                .then(() => {
+                    // 发送请求后不处理响应
+                    console.log("Request sent to backend successfully.");
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error communicating with the server.');
+                });
+
+            }
+
+
+            //处理变控制是否停止的变量
+            function set_stop(is_stopped) {//如果是"True"表示要让当前模型的反应停止，如果是"False"表示恢复到正常状态下不限制模型思考的情况
+                return fetch('/set_stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        input1: is_stopped
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Stop status updated:", data.status);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+
+            function getFileIcon(fileName) {//显示见文件的图标
+                const extension = fileName.split('.').pop().toLowerCase();
+                switch(extension) {
+                    case 'pdf':
+                        return 'fa-file-pdf';
+                    case 'doc':
+                    case 'docx':
+                        return 'fa-file-word';
+                    case 'xls':
+                    case 'xlsx':
+                    case 'xlsm':
+                        return 'fa-file-excel';
+                    case 'ppt':
+                    case 'pptx':
+                        return 'fa-file-powerpoint';
+                    case 'txt':
+                        return 'fa-file-alt';
+                    case 'jpg':
+                    case 'jpeg':
+                    case 'png':
+                        return 'fa-file-image';
+                    default:
+                        return 'fa-file';
+                }
+            }
+
+            let dialogTargetIndex = -1;  // 存储要删除的对话索引
+
+            // 点击删除按钮
+            $(document).on('click', '.delete-btn', function(e) {
+                e.stopPropagation();  // 阻止事件冒泡，发对话选择
+                dialogTargetIndex = $(this).parent().data('index');
+                showConfirmDialog();
+            });
+
+            // 显示确认对话框
+            function showConfirmDialog() {
+                $('#dialog-overlay').show();
+                $('#confirm-dialog').show();
+            }
+
+            // 隐藏确认对话框
+            function hideConfirmDialog() {
+                $('#dialog-overlay').hide();
+                $('#confirm-dialog').hide();
+                dialogTargetIndex = -1;
+            }
+
+            // 确认对话框按钮事件
+            $('.confirm-yes').click(function() {
+                if (dialogTargetIndex !== -1) {
+                    deleteConversation(dialogTargetIndex);
+                }
+                hideConfirmDialog();
+            });
+
+            $('.confirm-no').click(hideConfirmDialog);
+            $('#dialog-overlay').click(hideConfirmDialog);
+
+            // 删除对话函数
+            function deleteConversation(index) {
+                // 如果删除的是当前正在显示的对话，清空聊天区域
+                if (currentConversation === history[index]) {
+                    currentConversation = [];
+                    $('#chat-history').html('');
+                }
+
+                // 前端删除话
+                history.splice(index, 1);
+                updateHistory();  // 立即更新显示
+
+                // 通知后端删除对应的记忆
+                fetch('/delete_conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        index: index
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // 更新索引
+                        if (history_index === index) {
+                            set_index(0);
+                        } else if (history_index > index) {
+                            // 如果除的对话在当前对话之前，需要更新索引
+                            set_index(history_index - 1);
+                        }
+                    } else {
+                        console.error('Backend error:', data.message);
+                        // 不需要显示错误提示，因为删除操作在前端已经完成
+                    }
+                })
+                .catch(error => {
+                    console.error('Network error:', error);
+                    // 不需要显示错误提示，因为删除操作在前端已经完成
+                });
+            }
+
+            // 添加一个通用的摘要生成函数
+            function generateSummaryForConversation(conversation, index) {
+                // 如果已经被手动编辑过，则不更新摘要
+                if (conversation.isManuallyEdited) {
+                    return;
+                }
+
+                fetch('/generate_summary', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation: conversation
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.summary) {
+                        // 更新摘要
+                        history[index].summary = data.summary;
+                        updateHistory();  // 更新显示
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // 保持使用当前的题，不需要额外处理
+                });
+            }
+
+            // 添加一个函数来生成元信息显示
+            function generateMetaInfo(hasSearch, fileList, quotes) {
+                const selectedModel = $('#model').val();
+                const hasReasoning = selectedModel === 'deepseek-reasoner';
+
+                if (!hasSearch && (!fileList || fileList.length === 0) && (!quotes || quotes.length === 0) && !hasReasoning) return '';
+
+                let metaInfo = '<div class="message-meta">';
+
+                if (hasSearch) {
+                    metaInfo += `
+                        <div class="meta-item search-enabled">
+                            <i class="fas fa-search"></i>
+                            <span>已启用搜索</span>
+                        </div>
+                    `;
+                }
+
+                if (hasReasoning) {
+                    metaInfo += `
+                        <div class="meta-item reasoning-enabled">
+                            <i class="fas fa-brain"></i>
+                            <span>已启用推理功能</span>
+                        </div>
+                    `;
+                }
+
+                if (quotes && quotes.length > 0) {
+                    metaInfo += `
+                        <div class="meta-item quotes-attached">
+                            <div>
+                                <i class="fas fa-quote-right"></i>
+                                <span>引用内容：</span>
+                            </div>
+                            <div class="uploaded-files-list">
+                                ${quotes.map(quote => `
+                                    <div class="file-item">
+                                        <i class="fas fa-quote-left"></i>
+                                        <span>${quote}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (fileList && fileList.length > 0) {
+                    metaInfo += `
+                        <div class="meta-item files-attached">
+                            <div>
+                                <i class="fas fa-paperclip"></i>
+                                <span>已上传文件：</span>
+                            </div>
+                            <div class="uploaded-files-list">
+                                ${fileList.map(file => `
+                                    <div class="file-item">
+                                        <i class="fas ${getFileIcon(file)}"></i>
+                                        <span>${file}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                metaInfo += '</div>';
+                return metaInfo;
+            }
+
+            // 添加主题切换功能
+            let isDarkMode = localStorage.getItem('theme') === 'dark';
+
+            // 初始化主题
+            if (isDarkMode) {
+                $('body').addClass('dark-theme');
+                $('#theme-toggle i').removeClass('fa-sun').addClass('fa-moon');
+            }
+
+            // 主题切换事件
+            $('#theme-toggle').on('click', function() {
+                isDarkMode = !isDarkMode;
+                const themeToggle = $('#theme-toggle i');
+
+                if (isDarkMode) {
+                    $('body').addClass('dark-theme');
+                    themeToggle.removeClass('fa-sun').addClass('fa-moon');
+                } else {
+                    $('body').removeClass('dark-theme');
+                    themeToggle.removeClass('fa-moon').addClass('fa-sun');
+                }
+
+                // 保存主题偏好
+                localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+            });
+
+            // 添加编辑按钮的点击事件处理
+            $(document).on('click', '.edit-btn', function(e) {
+                e.stopPropagation();  // 阻止事件冒泡，防止触发对话选择
+                const historyItem = $(this).closest('.history-item');
+                const index = historyItem.data('index');
+                const titleSpan = historyItem.find('.title');
+                const currentTitle = titleSpan.text();
+
+                // 创建一个输入框
+                const input = $('<input type="text">').val(currentTitle).css({
+                    'width': '100%',
+                    'background': 'transparent',
+                    'color': 'white',
+                    'border': '1px solid #ffffff',
+                    'padding': '2px 5px',
+                    'border-radius': '4px'
+                });
+
+                // 替换标题为输入框
+                titleSpan.html(input);
+                input.focus();
+
+                // 处理输入框的失焦和回车事件
+                input.on('blur keypress', function(e) {
+                    if (e.type === 'blur' || (e.type === 'keypress' && e.which === 13)) {
+                        const newTitle = $(this).val().trim();
+                        if (newTitle) {
+                            history[index].summary = newTitle;
+                            history[index].isManuallyEdited = true; // 标记为手动编辑
+                            titleSpan.text(newTitle);
+                        } else {
+                            titleSpan.text(currentTitle);
+                        }
+                    }
+                });
+            });
+
+            // 添加消息编辑功能
+            $(document).on('click', '.message-edit-btn', function(e) {
+                e.stopPropagation();
+                const messageDiv = $(this).closest('.chat-message');
+                const messageContent = messageDiv.find('.message-content');
+                const messageIndex = messageDiv.data('message-index');
+
+                // 如果已经在编辑状态，则返回
+                if (messageDiv.hasClass('editing')) {
+                    return;
+                }
+
+                // 获取原始消息内容（不包括元信息）
+                const originalText = messageContent.clone()    // 克隆节点以避免修改原始内容
+                    .children()                               // 获取所有子元素
+                    .remove()                                 // 移除所有子元素（包括元信息）
+                    .end()                                    // 返回到原始节点
+                    .text()                                   // 获取剩余的文本内容
+                    .trim();                                  // 去除首尾空格
+
+                // 获取原始的元信息HTML
+                const metaInfo = messageContent.find('.message-meta').prop('outerHTML') || '';
+
+                // 保存原始内容
+                messageContent.data('original-content', messageContent.html());
+
+                // 创建编辑框和按钮
+                const editHtml = `
+                    <textarea class="edit-textarea" style="width: 100%; min-height: 100px; padding: 8px; border-radius: 8px; border: 1px solid #e5e5e5; margin-bottom: 8px;">${originalText}</textarea>
+                    ${metaInfo}
+                    <div class="edit-actions">
+                        <button class="edit-confirm">确认</button>
+                        <button class="edit-cancel">取消</button>
+                    </div>
+                `;
+
+                // 替换原始内容为编辑界面
+                messageContent.html(editHtml);
+                messageDiv.addClass('editing');
+
+                // 聚焦到编辑框并将光标移到文本末尾
+                const textarea = messageContent.find('.edit-textarea');
+                textarea.focus();
+                textarea[0].setSelectionRange(textarea.val().length, textarea.val().length);
+
+                // 处理确认编辑
+                messageContent.find('.edit-confirm').on('click', function() {
+                    const newText = messageContent.find('.edit-textarea').val().trim();
+                    if (!newText) return;
+
+                    // 获取当前对话的相关信息
+                    const msg = currentConversation[messageIndex];
+                    const hasSearch = msg.hasSearch;
+                    const uploadedFiles = msg.uploadedFiles || [];
+                    const quotes = msg.quotes || [];
+
+                    // 构建新的消息内容
+                    const newContent = `
+                        ${newText}
+                        ${generateMetaInfo(hasSearch, uploadedFiles, quotes)}
+                    `;
+
+                    // 更新UI
+                    messageContent.html(newContent);
+                    messageDiv.removeClass('editing');
+
+                    // 更新对话历史中的消息
+                    currentConversation[messageIndex] = {
+                        user: newText,
+                        hasSearch: hasSearch,
+                        uploadedFiles: uploadedFiles,
+                        quotes: quotes
+                    };
+
+                    // 删除该消息之后的所有消息
+                    const chatHistory = $('#chat-history');
+                    messageDiv.next('.bot-message').nextAll().remove();
+                    messageDiv.next('.bot-message').remove();
+                    currentConversation.splice(messageIndex + 1);
+
+                    // 发送编辑后的消息
+                    let finalInput = newText;
+                    if (quotes && quotes.length > 0) {
+                        const quotedContent = quotes.join('，');
+                        finalInput = `针对你上文提及的${quotedContent}，我发送以下问题：${newText}`;
+                    }
+
+                    // 发送编辑后的消息到服务器
+                    const controller = new AbortController();
+                    const signal = controller.signal;
+                    currentRequest = controller;
+
+                    $('#send-button').text('Thinking...');
+                    $('#send-button').off('mouseenter mouseleave');
+                    $('#send-button').on('mouseenter', function() {
+                        if ($(this).text() === 'Thinking...') {
+                            $(this).text('Stop?');
+                        }
+                    }).on('mouseleave', function() {
+                        if ($(this).text() === 'Stop?') {
+                            $(this).text('Thinking...');
+                        }
+                    });
+
+                    fetch('/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            input: finalInput,
+                            model: $('#model').val(),
+                            'search-toggle': $('#search-toggle').val(),
+                            message_index: messageIndex
+                        }),
+                        signal: signal
+                    }).then(response => {
+                        const reader = response.body.getReader();
+                        let accumulatedResponse = '';
+                        
+                        // 创建新的机器人消息div
+                        botMessageDiv = $(`
+                            <div class="chat-message bot-message">
+                                <div class="message-avatar bot-avatar">
+                                    <img src="${getModelAvatar($('#model').val())}" alt="Bot Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                                </div>
+                                <div class="message-content">
+                                    <button class="message-copy-btn" title="复制消息">
+                                        <i class="far fa-copy"></i>
+                                    </button>
+                                    <div class="bot-response"></div>
+                                </div>
+                            </div>
+                        `).appendTo('#chat-history');
+
+                        function processText({ done, value }) {
+                            if (done) {
+                                $('#send-button').text('Send');
+                                $('#send-button').off('mouseenter mouseleave');
+                                currentRequest = null;
+                                return;
+                            }
+
+                            const chunk = new TextDecoder().decode(value);
+                            const lines = chunk.split('\n');
+
+                            lines.forEach(line => {
+                                if (line.startsWith('data: ')) {
+                                    try {
+                                        const data = JSON.parse(line.slice(5));
+                                        if (data.reply) {
+                                            accumulatedResponse += data.reply;
+                                            botMessageDiv.find('.bot-response').html(accumulatedResponse);
+                                            $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                                        }
+                                        if (data.done) {
+                                            if (accumulatedResponse) {
+                                                // 只有在不是中断的情况下才添加完整的回复
+                                                if (!data.interrupted) {
+                                                    currentConversation.push({
+                                                        bot: accumulatedResponse,
+                                                        model: $('#model').val()  // 添加这一行，记录使用的模型
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing JSON:', e);
+                                    }
+                                }
+                            });
+
+                            return reader.read().then(processText);
+                        }
+
+                        return reader.read().then(processText);
+                    }).catch(error => {
+                        if (error.name === 'AbortError') {
+                            console.log('Fetch aborted');
+                        } else {
+                            console.error('Error:', error);
+                        }
+                        $('#send-button').text('Send');
+                        $('#send-button').off('mouseenter mouseleave');
+                        currentRequest = null;
+                    });
+                });
+
+                // 处理取消编辑
+                messageContent.find('.edit-cancel').on('click', function() {
+                    messageContent.html(messageContent.data('original-content'));
+                    messageDiv.removeClass('editing');
+                });
+            });
+
+            // 搜索功能实现
+            const searchInput = $('#history-search');
+            const clearSearch = $('#clear-search');
+
+            // 实时搜索处理
+            searchInput.on('input', function() {
+                const searchTerm = $(this).val().toLowerCase();
+                filterHistoryItems(searchTerm);
+            });
+
+            // 清除搜索
+            clearSearch.on('click', function() {
+                searchInput.val('');
+                filterHistoryItems('');
+            });
+
+            // 过滤和高亮显示搜索结果
+            function filterHistoryItems(searchTerm) {
+                $('.history-item').each(function() {
+                    const title = $(this).find('.title').text().toLowerCase();
+                    const matches = title.includes(searchTerm);
+
+                    if (searchTerm === '') {
+                        // 如果搜索词为空，显示原始文本
+                        $(this).show();
+                        $(this).find('.title').html(title);
+                    } else if (matches) {
+                        // 显示匹配项并高亮显示匹配文本
+                        $(this).show();
+                        const regex = new RegExp(`(${searchTerm})`, 'gi');
+                        const highlightedText = title.replace(regex, '<span class="highlight-match">$1</span>');
+                        $(this).find('.title').html(highlightedText);
+                    } else {
+                        // 隐藏不匹配的项
+                        $(this).hide();
+                    }
+                });
+            }
+
+            // 修改 updateHistory 函数，确保搜索状态在更新后保持
+            const originalUpdateHistory = updateHistory;
+            updateHistory = function() {
+                originalUpdateHistory();
+                const searchTerm = $('#history-search').val().toLowerCase();
+                if (searchTerm) {
+                    filterHistoryItems(searchTerm);
+                }
+            };
+
+            // 新对话按钮点击事件
+            $('#new-chat').on('click', function() {
+                // 清空聊天历史显示
+                $('#chat-history').html('');
+                
+                // 重置选择器
+                $('#model').val('moonshot-v1-8k');  // 重置为默认模型
+                $('#search-toggle').val('no');      // 重置搜索开关
+
+                // 保存当前对话（如果有内容）
+                if (currentConversation && currentConversation.length > 0) {
+                    // 检查是否需要将当前对话添加到历史记录中
+                    let shouldAddToHistory = true;
+                    
+                    // 检查当前对话是否已经在历史记录中
+                    for (let i = 0; i < history.length; i++) {
+                        if (history[i] === currentConversation) {
+                            shouldAddToHistory = false;
+                            break;
+                        }
+                    }
+                    
+                    if (shouldAddToHistory) {
+                        history.push(currentConversation);
+                        const newIndex = history.length - 1;
+                        const tempTitle = `对话 ${newIndex + 1}`;
+                        currentConversation.summary = tempTitle;
+                        updateHistory();
+                        generateSummaryForConversation(currentConversation, newIndex);
+                    }
+                }
+
+                // 创建新的对话
+                currentConversation = [];
+                
+                // 获取新对话的索引（一定要在可能添加新对话到历史记录之后）
+                const newIndex = history.length;
+                
+                // 强制触发 set_index，即使 newIndex 与当前索引相同
+                set_index(newIndex).then(() => {
+                    // 清空已上传文件显示
+                    $('#uploaded-files').html('');
+                    $('#file-upload').val('');
+                    
+                    // 清空引用
+                    $('#quote-container').empty();
+                    
+                    // 更新历史记录显示
+                    updateHistory();
+                });
+            });
+
+            // 添加模型头像映射
+            const MODEL_AVATARS = {
+                'moonshot-v1-8k': '/static/images/kimi.png',
+                'moonshot-v1-32k': '/static/images/kimi.png',
+                'moonshot-v1-128k': '/static/images/kimi.png',
+                'deepseek-chat': '/static/images/deepseek.png',
+                'deepseek-reasoner': '/static/images/deepseek.png'
+            };
+
+            // 获取当前模型的头像URL的函数
+            function getModelAvatar(model) {
+                return MODEL_AVATARS[model] || '/static/images/default.png';
+            }
+
+            // 复制功能的实现
+            $(document).on('click', '.message-copy-btn', function(e) {
+                e.stopPropagation();
+                const messageDiv = $(this).closest('.message-content');
+                
+                // 获取要复制的文本（排除按钮本身）
+                const textContent = messageDiv.find('.bot-response').text().trim();
+
+                // 创建临时textarea
+                const textarea = document.createElement('textarea');
+                textarea.value = textContent;
+                document.body.appendChild(textarea);
+                textarea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    
+                    // 复制成功的视觉反馈
+                    const copyBtn = $(this);
+                    copyBtn.addClass('copy-success');
+                    
+                    // 更改图标为对勾
+                    copyBtn.html('<i class="fas fa-check"></i>');
+                    
+                    // 1秒后恢复原状
+                    setTimeout(() => {
+                        copyBtn.removeClass('copy-success');
+                        copyBtn.html('<i class="far fa-copy"></i>');
+                    }, 1000);
+                    
+                } catch (err) {
+                    console.error('复制失败:', err);
+                } finally {
+                    document.body.removeChild(textarea);
+                }
+            });
+
+            // 修改所有创建bot消息的函数，确保包含复制按钮
+            function displayBotMessage(content, model) {
+                return `
+                    <div class="chat-message bot-message">
+                        <div class="message-avatar bot-avatar">
+                            <img src="${getModelAvatar(model || $('#model').val())}" alt="Bot Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                        </div>
+                        <div class="message-content">
+                            <button class="message-copy-btn" title="复制消息">
+                                <i class="far fa-copy"></i>
+                            </button>
+                            ${content}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 获取个人偏好模态框元素
+            const preferencesModal = document.getElementById('preferences-modal');
+            const preferencesClose = document.querySelector('.preferences-close');
+            const preferences = document.getElementById('preferences');
+
+            // 个人偏好按钮点击事件
+            preferences.addEventListener('click', () => {
+                preferencesModal.style.display = 'block';
+                settingsMenu.style.display = 'none'; // 关闭设置菜单
+            });
+
+            // 关闭个人偏好模态框
+            function closePreferences() {
+                preferencesModal.style.display = 'none';
+            }
+
+            // 点击模态框外部关闭模态框
+            preferencesModal.addEventListener('click', (e) => {
+                if (e.target === preferencesModal) {
+                    closePreferences();
+                }
+            });
+
+            // 点击关闭按钮关闭模态框
+            preferencesClose.addEventListener('click', closePreferences);
+
+            // 为所有滑块添加值更新事件
+            $('.preference-slider').each(function() {
+                const $slider = $(this);
+                const $valueDisplay = $slider.closest('.slider-container').find('.slider-value');
+                
+                // 设置初始值
+                $valueDisplay.text($slider.val());
+                
+                // 添加实时更新事件
+                $slider.on('input', function() {
+                    $valueDisplay.text($(this).val());
+                });
+            });
+
+            // 为所有模态框添加拖动功能
+            function makeModalDraggable(modalSelector, handleSelector) {
+                const $modal = $(modalSelector);
+                const $handle = $(handleSelector);
+                
+                let isDragging = false;
+                let startX, startY, initialX, initialY;
+                
+                $handle.on('mousedown', function(e) {
+                    isDragging = true;
+                    const $content = $modal.find('.modal-content, .preferences-content, .account-info-content, .reset-password-content');
+                    
+                    // 如果是登录或注册模态框，直接使用.modal-content
+                    if ($content.length === 0) {
+                        $content = $modal.find('.auth-form').parent();
+                    }
+                    
+                    // 获取模态框的当前位置
+                    const rect = $content[0].getBoundingClientRect();
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    initialX = rect.left;
+                    initialY = rect.top;
+                    
+                    // 防止文本被选中
+                    e.preventDefault();
+                });
+                
+                $(document).on('mousemove', function(e) {
+                    if (!isDragging) return;
+                    
+                    const $content = $modal.find('.modal-content, .preferences-content, .account-info-content, .reset-password-content');
+                    // 如果是登录或注册模态框，直接使用.modal-content
+                    if ($content.length === 0) {
+                        $content = $modal.find('.auth-form').parent();
+                    }
+                    
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    
+                    $content.css({
+                        left: initialX + dx + 'px',
+                        top: initialY + dy + 'px',
+                        position: 'fixed',
+                        margin: 0
+                    });
+                });
+                
+                $(document).on('mouseup', function() {
+                    isDragging = false;
+                });
+            }
+            
+            // 为各个模态框添加拖动功能
+            makeModalDraggable('#login-modal', '#login-modal h2');
+            makeModalDraggable('#register-modal', '#register-modal h2');
+            makeModalDraggable('#preferences-modal', '.preferences-header');
+            makeModalDraggable('#account-info-modal', '.account-info-header');
+            makeModalDraggable('#resetPasswordModal', '.reset-password-header');
+        });
+
+        // 在现有的JavaScript代码后添加以下内容
+
+        // 模态框相关函数
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function switchModal(closeModalId, openModalId) {
+            closeModal(closeModalId);
+            openModal(openModalId);
+        }
+
+        // 绑定登录/注册按钮点击事件
+        document.querySelector('.login-button').addEventListener('click', () => openModal('login-modal'));
+        document.querySelector('.register-button').addEventListener('click', () => openModal('register-modal'));
+
+        // 点击模态框外部关闭模态框
+        window.addEventListener('click', (event) => {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        });
+
+        // 处理登录表单提交
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    // 登录成功
+                    closeModal('login-modal');
+                    // 更新UI显示用户状态
+                    updateUserStatus(data.username);
+                } else {
+                    // 登录失败
+                    alert(data.message || '登录失败，请重试');
+                }
+            } catch (error) {
+                alert('登录失败，请稍后重试');
+            }
+        });
+
+        // 处理注册表单提交
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+            const verificationCode = document.getElementById('register-verification-code').value;
+
+            // 验证密码强度
+            const hasLength = password.length >= 8;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            if (!hasLength || !hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecial) {
+                alert('请确保密码满足所有强度要求');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('两次输入的密码不一致');
+                return;
+            }
+
+            if (!verificationCode) {
+                alert('请输入验证码');
+                return;
+            }
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        password,
+                        verification_code: verificationCode
+                    }),
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    closeModal('register-modal');
+                    alert('注册成功，请登录');
+                    openModal('login-modal');
+                } else {
+                    alert(data.message || '注册失败，请重试');
+                }
+            } catch (error) {
+                alert('注册失败，请稍后重试');
+            }
+        });
+
+        // 更新用户状态UI
+        function updateUserStatus(username) {
+            const authButtons = document.querySelector('.auth-buttons');
+            authButtons.innerHTML = `
+                <div class="user-info">
+                    <div class="username-display">
+                        <i class="fas fa-user"></i>
+                        <span>欢迎，${username}</span>
+                    </div>
+                    <button class="auth-button logout-button" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        退出登录
+                    </button>
+                </div>
+            `;
+        }
+
+        // 处理退出登录
+        async function handleLogout() {
+            try {
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                });
+
+                if (response.ok) {
+                    const authButtons = document.querySelector('.auth-buttons');
+                    authButtons.innerHTML = `
+                        <button class="auth-button login-button">
+                            <i class="fas fa-sign-in-alt"></i>
+                            登录
+                        </button>
+                        <button class="auth-button register-button">
+                            <i class="fas fa-user-plus"></i>
+                            注册
+                        </button>
+                    `;
+                    // 重新绑定事件
+                    document.querySelector('.login-button').addEventListener('click', () => openModal('login-modal'));
+                    document.querySelector('.register-button').addEventListener('click', () => openModal('register-modal'));
+                } else {
+                    alert('退出失败，请重试');
+                }
+            } catch (error) {
+                alert('退出失败，请稍后重试');
+            }
+        }
+
+        // 添加密码强度验证相关的JavaScript代码
+        document.getElementById('register-password').addEventListener('input', function(e) {
+            const password = e.target.value;
+            const strengthBar = document.getElementById('strength-bar');
+            
+            // 检查各项要求
+            const hasLength = password.length >= 8;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            
+            // 更新要求指示器
+            updateRequirement('length-req', hasLength);
+            updateRequirement('uppercase-req', hasUpperCase);
+            updateRequirement('lowercase-req', hasLowerCase);
+            updateRequirement('number-req', hasNumber);
+            updateRequirement('special-req', hasSpecial);
+            
+            // 计算密码强度
+            const requirements = [hasLength, hasUpperCase, hasLowerCase, hasNumber, hasSpecial];
+            const metRequirements = requirements.filter(req => req).length;
+            
+            // 更新强度条
+            let strength = '';
+            let width = '';
+            
+            if (password.length === 0) {
+                width = '0%';
+                strengthBar.className = '';
+            } else if (metRequirements <= 2) {
+                width = '33%';
+                strengthBar.className = 'strength-weak';
+            } else if (metRequirements <= 4) {
+                width = '66%';
+                strengthBar.className = 'strength-medium';
+            } else {
+                width = '100%';
+                strengthBar.className = 'strength-strong';
+            }
+            
+            strengthBar.style.width = width;
+        });
+
+        function updateRequirement(reqId, isMet) {
+            const req = document.getElementById(reqId);
+            if (isMet) {
+                req.classList.remove('unmet');
+                req.classList.add('met');
+                req.querySelector('i').className = 'fas fa-check-circle';
+            } else {
+                req.classList.remove('met');
+                req.classList.add('unmet');
+                req.querySelector('i').className = 'fas fa-circle';
+            }
+        }
+
+        // 添加发送验证码相关的JavaScript代码
+        document.addEventListener('DOMContentLoaded', function() {
+            const sendCodeBtn = document.getElementById('send-code-btn');
+            const emailInput = document.getElementById('register-email');
+            let countdown = 0;
+            let countdownInterval;
+
+            function updateCountdown() {
+                if (countdown > 0) {
+                    sendCodeBtn.disabled = true;
+                    sendCodeBtn.textContent = `重新发送(${countdown}s)`;
+                    countdown--;
+                } else {
+                    sendCodeBtn.disabled = false;
+                    sendCodeBtn.textContent = '发送验证码';
+                    clearInterval(countdownInterval);
+                }
+            }
+
+            sendCodeBtn.addEventListener('click', async function() {
+                const email = emailInput.value.trim();
+                
+                if (!email) {
+                    alert('请输入邮箱地址');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/send_verification_code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email }),
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        // 开始倒计时
+                        countdown = 60;
+                        updateCountdown();
+                        countdownInterval = setInterval(updateCountdown, 1000);
+                        alert('验证码已发送，请查收邮件');
+                    } else {
+                        alert(data.message || '发送验证码失败，请重试');
+                    }
+                } catch (error) {
+                    alert('发送验证码失败，请稍后重试');
+                }
+            });
+
+            // 处理注册表单提交
+            document.getElementById('register-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('register-username').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('register-confirm-password').value;
+                const verificationCode = document.getElementById('register-verification-code').value;
+
+                // 验证密码强度
+                const hasLength = password.length >= 8;
+                const hasUpperCase = /[A-Z]/.test(password);
+                const hasLowerCase = /[a-z]/.test(password);
+                const hasNumber = /[0-9]/.test(password);
+                const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+                if (!hasLength || !hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecial) {
+                    alert('请确保密码满足所有强度要求');
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    alert('两次输入的密码不一致');
+                    return;
+                }
+
+                if (!verificationCode) {
+                    alert('请输入验证码');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            username,
+                            email,
+                            password,
+                            verification_code: verificationCode
+                        }),
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        closeModal('register-modal');
+                        alert('注册成功，请登录');
+                        openModal('login-modal');
+                    } else {
+                        alert(data.message || '注册失败，请重试');
+                    }
+                } catch (error) {
+                    alert('注册失败，请稍后重试');
+                }
+            });
+        });
+
+        // 设置按钮和菜单的交互逻辑
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const accountInfo = document.getElementById('accountInfo');
+        const preferences = document.getElementById('preferences');
+
+        // 点击设置按钮时显示/隐藏菜单
+        settingsButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsMenu.style.display = settingsMenu.style.display === 'flex' ? 'none' : 'flex';
+        });
+
+        // 点击页面其他地方时隐藏菜单
+        document.addEventListener('click', (e) => {
+            if (!settingsMenu.contains(e.target) && e.target !== settingsButton) {
+                settingsMenu.style.display = 'none';
+            }
+        });
+
+        // 账户信息按钮点击事件
+        accountInfo.addEventListener('click', () => {
+            // TODO: 处理账户信息的逻辑
+            console.log('账户信息按钮被点击');
+        });
+
+        // 个人偏好按钮点击事件
+        preferences.addEventListener('click', () => {
+            preferencesModal.style.display = 'block';
+            settingsMenu.style.display = 'none'; // 关闭设置菜单
+        });
+
+        // 获取账户信息模态框元素
+        const accountInfoModal = document.getElementById('account-info-modal');
+        const accountInfoClose = document.querySelector('.account-info-close');
+        const accountUsername = document.getElementById('account-username');
+        const accountEmail = document.getElementById('account-email');
+        const accountPassword = document.getElementById('account-password');
+
+        // 显示账户信息模态框
+        function showAccountInfo() {
+            // 获取当前用户信息
+            fetch('/user/current')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.username && data.user_id) {
+                        // 如果用户已登录，获取详细信息
+                        fetch('/users/' + data.user_id)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('获取用户详细信息失败');
+                                }
+                                return response.json();
+                            })
+                            .then(userData => {
+                                // 显示用户详细信息
+                                accountUsername.textContent = userData.username;
+                                accountEmail.textContent = userData.email;
+                                accountPassword.textContent = '********'; // 出于安全考虑，不显示实际密码
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                // 发生错误时显示默认值
+                                accountUsername.textContent = '暂无';
+                                accountEmail.textContent = '暂无';
+                                accountPassword.textContent = '暂无';
+                            });
+                    } else {
+                        // 如果用户未登录，显示默认值
+                        accountUsername.textContent = '暂无';
+                        accountEmail.textContent = '暂无';
+                        accountPassword.textContent = '暂无';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // 发生错误时显示默认值
+                    accountUsername.textContent = '暂无';
+                    accountEmail.textContent = '暂无';
+                    accountPassword.textContent = '暂无';
+                });
+
+            // 显示模态框
+            accountInfoModal.style.display = 'block';
+        }
+
+        // 关闭账户信息模态框
+        function closeAccountInfo() {
+            accountInfoModal.style.display = 'none';
+        }
+
+        // 点击模态框外部关闭模态框
+        accountInfoModal.addEventListener('click', (e) => {
+            if (e.target === accountInfoModal) {
+                closeAccountInfo();
+            }
+        });
+
+        // 点击关闭按钮关闭模态框
+        accountInfoClose.addEventListener('click', closeAccountInfo);
+
+        // 更新账户信息按钮点击事件
+        accountInfo.addEventListener('click', () => {
+            showAccountInfo();
+            settingsMenu.style.display = 'none'; // 关闭设置菜单
+        });
+
+        // 获取忘记密码按钮元素
+        const forgotPasswordBtn = document.getElementById('forgot-password');
+
+        // 添加点击事件处理
+        forgotPasswordBtn.addEventListener('click', () => {
+            showResetPasswordModal();  // 直接调用显示重置密码模态框
+        });
+
+        // 忘记密码相关的JavaScript代码
+        document.addEventListener('DOMContentLoaded', function() {
+            const resetPasswordModal = document.getElementById('resetPasswordModal');
+            const resetPasswordClose = document.querySelector('.reset-password-close');
+            const sendResetCodeBtn = document.getElementById('sendResetCode');
+            const verifyResetCodeBtn = document.getElementById('verifyResetCode');
+            const resetPasswordResult = document.getElementById('resetPasswordResult');
+
+            // 显示忘记密码模态框
+            window.showResetPasswordModal = function() {
+                resetPasswordModal.style.display = 'block';
+            }
+
+            // 关闭忘记密码模态框
+            resetPasswordClose.onclick = function() {
+                resetPasswordModal.style.display = 'none';
+                // 清空表单和结果
+                document.getElementById('resetUsername').value = '';
+                document.getElementById('resetEmail').value = '';
+                document.getElementById('resetCode').value = '';
+                resetPasswordResult.style.display = 'none';
+            }
+
+            // 点击模态框外部关闭
+            window.onclick = function(event) {
+                if (event.target == resetPasswordModal) {
+                    resetPasswordClose.click();
+                }
+            }
+
+            // 发送重置密码验证码
+            sendResetCodeBtn.onclick = async function() {
+                const username = document.getElementById('resetUsername').value;
+                const email = document.getElementById('resetEmail').value;
+
+                if (!username || !email) {
+                    showResetResult('请填写用户名和邮箱', false);
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/send_reset_code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ username, email }),
+                    });
+
+                    const data = await response.json();
+                    showResetResult(data.message, response.ok);
+
+                    if (response.ok) {
+                        // 禁用发送按钮5分钟
+                        sendResetCodeBtn.disabled = true;
+                        let countdown = 300;
+                        const timer = setInterval(() => {
+                            sendResetCodeBtn.textContent = `${countdown}秒后可重新发送`;
+                            countdown--;
+                            if (countdown < 0) {
+                                clearInterval(timer);
+                                sendResetCodeBtn.disabled = false;
+                                sendResetCodeBtn.textContent = '发送验证码';
+                            }
+                        }, 1000);
+                    }
+                } catch (error) {
+                    showResetResult('发送验证码失败，请稍后重试', false);
+                }
+            }
+
+            // 验证重置密码验证码
+            verifyResetCodeBtn.onclick = async function() {
+                const username = document.getElementById('resetUsername').value;
+                const email = document.getElementById('resetEmail').value;
+                const code = document.getElementById('resetCode').value;
+
+                if (!username || !email || !code) {
+                    showResetResult('请填写所有字段', false);
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/verify_reset_code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ username, email, code }),
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok && data.password) {
+                        showResetResult(`您的密码是：${data.password}`, true);
+                    } else {
+                        showResetResult(data.message, false);
+                    }
+                } catch (error) {
+                    showResetResult('验证失败，请稍后重试', false);
+                }
+            }
+
+            // 显示重置密码结果
+            function showResetResult(message, isSuccess) {
+                resetPasswordResult.textContent = message;
+                resetPasswordResult.className = 'reset-password-result ' + (isSuccess ? 'success' : 'error');
+                resetPasswordResult.style.display = 'block';
+            }
+        });
+
+        // 忘记密码按钮点击事件
+        $('#forgotPasswordBtn').click(function(e) {
+            e.preventDefault();
+            showResetPasswordModal();
+        });
+
+        // 头像上传相关的JavaScript代码
+        document.addEventListener('DOMContentLoaded', function() {
+            const avatarInput = document.getElementById('avatarInput');
+            const avatarPreview = document.getElementById('avatarPreview');
+
+            // 当选择新文件时
+            avatarInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // 预览图片
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        avatarPreview.src = e.target.result;
+                    }
+                    reader.readAsDataURL(file);
+
+                    // 上传图片
+                    const formData = new FormData();
+                    formData.append('avatar', file);
+
+                    fetch('/upload_avatar', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.avatar_url) {
+                            avatarPreview.src = data.avatar_url;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('上传头像失败，请稍后重试');
+                    });
+                }
+            });
+
+            // 显示账户信息时加载头像
+            window.showAccountInfo = function() {
+                const avatarContainer = document.querySelector('.avatar-container');
+                
+                fetch('/user/current')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.username && data.user_id) {
+                            // 用户已登录，显示头像相关内容
+                            avatarContainer.style.display = 'block';
+                            
+                            // 获取用户头像
+                            fetch('/get_avatar/' + data.user_id)
+                                .then(response => response.json())
+                                .then(avatarData => {
+                                    if (avatarData.avatar_url) {
+                                        avatarPreview.src = avatarData.avatar_url;
+                                    }
+                                });
+
+                            // 获取其他用户信息
+                            fetch('/users/' + data.user_id)
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error('获取用户详细信息失败');
+                                    }
+                                    return response.json();
+                                })
+                                .then(userData => {
+                                    accountUsername.textContent = userData.username;
+                                    accountEmail.textContent = userData.email;
+                                    document.getElementById('account-password').textContent = '********';
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    accountUsername.textContent = '暂无';
+                                    accountEmail.textContent = '暂无';
+                                    document.getElementById('account-password').textContent = '暂无';
+                                });
+                        } else {
+                            // 用户未登录，隐藏头像相关内容
+                            avatarContainer.style.display = 'none';
+                            accountUsername.textContent = '暂无';
+                            accountEmail.textContent = '暂无';
+                            document.getElementById('account-password').textContent = '暂无';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // 发生错误时隐藏头像相关内容
+                        avatarContainer.style.display = 'none';
+                        accountUsername.textContent = '暂无';
+                        accountEmail.textContent = '暂无';
+                        document.getElementById('account-password').textContent = '暂无';
+                    });
+
+                accountInfoModal.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
